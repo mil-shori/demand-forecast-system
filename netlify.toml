@@ -9,7 +9,7 @@
   command = "npm ci && npm run build"
   
   # パブリッシュディレクトリ
-  publish = "frontend/dist"
+  publish = "dist"
 
 [build.environment]
   # Node.js バージョン
@@ -135,5 +135,5 @@
 [dev]
   command = "npm run dev"
   port = 3000
-  publish = "frontend/dist"
+  publish = "dist"
   autoLaunch = true
