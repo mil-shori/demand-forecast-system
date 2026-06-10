@@ -13,7 +13,7 @@ interface ForecastChartProps {
 }
 
 const ForecastChart: React.FC<ForecastChartProps> = ({
-  data,
+  data: _data,
   height = 300,
   className
 }) => {

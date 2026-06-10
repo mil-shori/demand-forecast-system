@@ -62,9 +62,9 @@ const ForecastResults: React.FC = () => {
               </label>
               <select className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
                 <option value="">全て</option>
-                <option value="high">高精度 (MAPE < 10%)</option>
-                <option value="medium">中精度 (MAPE < 20%)</option>
-                <option value="low">要確認 (MAPE >= 20%)</option>
+                <option value="high">高精度 (MAPE &lt; 10%)</option>
+                <option value="medium">中精度 (MAPE &lt; 20%)</option>
+                <option value="low">要確認 (MAPE &gt;= 20%)</option>
               </select>
             </div>
             <div className="flex items-end">
@@ -153,7 +153,7 @@ const ForecastResults: React.FC = () => {
         <div className="card-body">
           <ForecastChart
             data={[]}
-            height="400px"
+            height={400}
             className="w-full"
           />
           <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">

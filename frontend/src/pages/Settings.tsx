@@ -4,7 +4,7 @@ import {
   UserIcon,
   BellIcon,
   ShieldCheckIcon,
-  DatabaseIcon,
+  CircleStackIcon,
   ClockIcon
 } from '@heroicons/react/24/outline'
 
@@ -154,7 +154,7 @@ const Settings: React.FC = () => {
           <div className="card">
             <div className="card-header">
               <div className="flex items-center">
-                <DatabaseIcon className="h-5 w-5 text-blue-600 mr-2" />
+                <CircleStackIcon className="h-5 w-5 text-blue-600 mr-2" />
                 <h3 className="text-lg font-medium text-gray-900">
                   データ設定
                 </h3>

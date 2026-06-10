@@ -3,10 +3,9 @@ import { useQuery } from '@tanstack/react-query'
 import {
   ChartBarIcon,
   ExclamationTriangleIcon,
-  TrendingUpIcon,
+  ArrowTrendingUpIcon,
   CurrencyYenIcon,
-  ArrowUpIcon,
-  ArrowDownIcon
+  ArrowUpIcon
 } from '@heroicons/react/24/outline'
 import MetricCard from '../components/MetricCard'
 import ForecastChart from '../components/ForecastChart'
@@ -83,7 +82,7 @@ const Dashboard: React.FC = () => {
           value="2.3%"
           previousValue="2.8%"
           trend="down"
-          icon={TrendingUpIcon}
+          icon={ArrowTrendingUpIcon}
           color="green"
         />
         <MetricCard
