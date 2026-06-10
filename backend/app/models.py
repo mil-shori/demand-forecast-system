@@ -2,8 +2,8 @@
 データベースモデル定義
 """
 from sqlalchemy import (
-    Column, String, Integer, Date, DateTime, Decimal, Boolean, 
-    Text, ForeignKey, Index, Enum as SQLEnum, UniqueConstraint
+    Column, String, Integer, Date, DateTime, Numeric, Boolean,
+    Text, ForeignKey, Index, Enum as SQLEnum, UniqueConstraint, JSON
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -44,7 +44,7 @@ class Order(Base):
     order_date = Column(Date, nullable=False, index=True)
     order_type = Column(SQLEnum(OrderType), nullable=False, index=True)
     subscription_id = Column(String(50), ForeignKey('subscriptions.subscription_id'), nullable=True, index=True)
-    total_amount = Column(Decimal(10, 2), nullable=True)
+    total_amount = Column(Numeric(10, 2), nullable=True)
     channel = Column(SQLEnum(Channel), default=Channel.WEB, nullable=False)
     
     # メタデータ
@@ -70,8 +70,8 @@ class OrderItem(Base):
     order_id = Column(String(50), ForeignKey('orders.order_id'), nullable=False, index=True)
     sku = Column(String(100), ForeignKey('products.sku'), nullable=False, index=True)
     quantity = Column(Integer, nullable=False)
-    unit_price = Column(Decimal(8, 2), nullable=True)
-    discount_rate = Column(Decimal(3, 2), default=0.0)
+    unit_price = Column(Numeric(8, 2), nullable=True)
+    discount_rate = Column(Numeric(3, 2), default=0.0)
     promotion_code = Column(String(20), nullable=True)
     
     # メタデータ
@@ -98,8 +98,8 @@ class Product(Base):
     subcategory = Column(String(50), nullable=True)
     brand = Column(String(50), nullable=True)
     is_set_item = Column(Boolean, default=False, index=True)
-    base_price = Column(Decimal(8, 2), nullable=True)
-    cost = Column(Decimal(8, 2), nullable=True)
+    base_price = Column(Numeric(8, 2), nullable=True)
+    cost = Column(Numeric(8, 2), nullable=True)
     weight_grams = Column(Integer, nullable=True)
     dimensions = Column(String(50), nullable=True)  # "L×W×H" format
     description = Column(Text, nullable=True)
@@ -210,6 +210,133 @@ class UserProfile(Base):
     __table_args__ = (
         Index('ix_user_profiles_email', 'email'),
         Index('ix_user_profiles_segment', 'customer_segment'),
+    )
+
+
+class MappingType(str, Enum):
+    """勘定科目マッピング種別"""
+    SALES_CATEGORY = "sales_category"      # 売上カテゴリ
+    EXPENSE_CATEGORY = "expense_category"  # 経費カテゴリ
+
+
+class JournalEntryType(str, Enum):
+    """仕訳種別"""
+    SALES = "sales"      # 売上
+    EXPENSE = "expense"  # 経費
+
+
+class JournalEntryStatus(str, Enum):
+    """仕訳の同期ステータス"""
+    PENDING = "pending"  # 未送信
+    SYNCED = "synced"    # freee登録済み
+    FAILED = "failed"    # 送信失敗
+    SKIPPED = "skipped"  # スキップ（対象外）
+
+
+class ExpenseStatus(str, Enum):
+    """経費ステータス"""
+    DRAFT = "draft"          # 下書き
+    CONFIRMED = "confirmed"  # 確定（同期待ち）
+    SYNCED = "synced"        # freee登録済み
+    FAILED = "failed"        # 送信失敗
+
+
+class FreeeToken(Base):
+    """freee OAuth2トークン（access/refresh はFernetで暗号化して格納）"""
+    __tablename__ = "freee_tokens"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    company_id = Column(Integer, nullable=False, unique=True, index=True)  # freee事業所ID
+    company_name = Column(String(200), nullable=True)
+    access_token = Column(Text, nullable=False)   # 暗号化済み
+    refresh_token = Column(Text, nullable=False)  # 暗号化済み
+    token_type = Column(String(20), default="bearer")
+    scope = Column(String(500), nullable=True)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    is_active = Column(Boolean, default=False, index=True)  # 現在選択中の事業所
+
+    # メタデータ
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class AccountItemMapping(Base):
+    """勘定科目マッピング（カテゴリ→freee勘定科目の自動推定ルール）"""
+    __tablename__ = "account_item_mappings"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    mapping_type = Column(SQLEnum(MappingType), nullable=False, index=True)
+    source_key = Column(String(100), nullable=False)  # 商品カテゴリ名 or 経費カテゴリ名
+    keywords = Column(Text, nullable=True)  # カンマ区切り。摘要からの部分一致推定に使用
+    freee_account_item_id = Column(Integer, nullable=False)
+    freee_account_item_name = Column(String(200), nullable=True)
+    freee_tax_code = Column(Integer, nullable=True)
+    freee_partner_id = Column(Integer, nullable=True)
+    priority = Column(Integer, default=0)
+    active = Column(Boolean, default=True, index=True)
+
+    # メタデータ
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    # 制約
+    __table_args__ = (
+        UniqueConstraint('mapping_type', 'source_key', name='uq_account_item_mappings_type_key'),
+    )
+
+
+class JournalEntry(Base):
+    """仕訳（freee取引との対応・同期ログ）"""
+    __tablename__ = "journal_entries"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    entry_date = Column(Date, nullable=False, index=True)
+    entry_type = Column(SQLEnum(JournalEntryType), nullable=False, index=True)
+    source_type = Column(String(50), nullable=False)  # 'sales_daily' | 'sales_monthly' | 'expense'
+    source_key = Column(String(100), nullable=False)  # 例: '2026-05-01', 'expense:42'
+    description = Column(String(500), nullable=True)
+    amount = Column(Numeric(12, 2), nullable=False)
+    details = Column(JSON, nullable=True)  # freee dealペイロード
+    freee_company_id = Column(Integer, nullable=True)
+    freee_deal_id = Column(Integer, nullable=True, index=True)
+    status = Column(SQLEnum(JournalEntryStatus), default=JournalEntryStatus.PENDING, nullable=False, index=True)
+    error_message = Column(Text, nullable=True)
+    synced_at = Column(DateTime(timezone=True), nullable=True)
+
+    # メタデータ
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    # 制約・インデックス（UNIQUE制約が再実行時の二重登録を防止する）
+    __table_args__ = (
+        UniqueConstraint('source_type', 'source_key', name='uq_journal_entries_source'),
+        Index('ix_journal_entries_date_status', 'entry_date', 'status'),
+    )
+
+
+class Expense(Base):
+    """経費テーブル"""
+    __tablename__ = "expenses"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    expense_date = Column(Date, nullable=False, index=True)
+    amount = Column(Numeric(12, 2), nullable=False)
+    category = Column(String(100), nullable=False, index=True)
+    description = Column(Text, nullable=True)
+    payment_method = Column(String(30), default="cash")  # cash / credit_card / bank_transfer
+    partner_name = Column(String(200), nullable=True)
+    receipt_filename = Column(String(255), nullable=True)
+    status = Column(SQLEnum(ExpenseStatus), default=ExpenseStatus.DRAFT, nullable=False, index=True)
+    freee_deal_id = Column(Integer, nullable=True)
+    created_by = Column(String(100), nullable=True)
+
+    # メタデータ
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    # インデックス
+    __table_args__ = (
+        Index('ix_expenses_date_status', 'expense_date', 'status'),
     )
 
 

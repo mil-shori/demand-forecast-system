@@ -1,7 +1,7 @@
 """
 データベース設定とセッション管理
 """
-from sqlalchemy import create_engine, MetaData
+from sqlalchemy import create_engine, MetaData, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import StaticPool
@@ -91,7 +91,7 @@ async def check_database_connection() -> bool:
     """
     try:
         db = SessionLocal()
-        db.execute("SELECT 1")
+        db.execute(text("SELECT 1"))
         db.close()
         return True
     except Exception as e:
@@ -107,7 +107,7 @@ class DatabaseHealthCheck:
         """接続状況チェック"""
         try:
             db = SessionLocal()
-            result = db.execute("SELECT 1").fetchone()
+            result = db.execute(text("SELECT 1")).fetchone()
             db.close()
             
             if result:
@@ -141,7 +141,8 @@ class DatabaseHealthCheck:
             existing_tables = []
             for table in required_tables:
                 result = db.execute(
-                    f"SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = '{table}')"
+                    text("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = :table)"),
+                    {"table": table},
                 ).fetchone()
                 
                 if result and result[0]:
