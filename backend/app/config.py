@@ -53,6 +53,14 @@ class Settings(BaseSettings):
     # ビジネス設定
     default_service_level: float = 0.95
     default_lead_time_days: int = 7
+
+    # freee API連携設定
+    freee_client_id: str = ""
+    freee_client_secret: str = ""
+    freee_redirect_uri: str = "http://localhost:8000/api/v1/accounting/freee/callback"
+    freee_api_base_url: str = "https://api.freee.co.jp"
+    freee_auth_base_url: str = "https://accounts.secure.freee.co.jp"
+    frontend_base_url: str = "http://localhost:3000"
     
     @validator('allowed_origins', pre=True)
     def parse_cors_origins(cls, v):

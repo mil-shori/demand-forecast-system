@@ -57,6 +57,10 @@ services:
       - ENVIRONMENT=development
       - DEBUG=true
       - SECRET_KEY=dev-secret-key-change-in-production-12345678901234567890
+    env_file:
+      # FREEE_* / DATA_ENCRYPTION_KEY を読み込む（.gitignore済み・無くても起動可）
+      - path: ./backend/.env
+        required: false
     volumes:
       - ./backend:/app
       - ./data/uploads:/app/uploads

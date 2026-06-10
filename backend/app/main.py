@@ -13,7 +13,7 @@ from contextlib import asynccontextmanager
 
 from app.config import settings
 from app.database import create_tables, check_database_connection
-from app.api.v1 import health, data_import, forecast
+from app.api.v1 import health, data_import, forecast, accounting
 
 
 # ログ設定
@@ -143,6 +143,7 @@ async def internal_error_handler(request: Request, exc: Exception):
 app.include_router(health.router, prefix="/api/v1", tags=["health"])
 app.include_router(data_import.router, prefix="/api/v1", tags=["data"])
 app.include_router(forecast.router, prefix="/api/v1", tags=["forecast"])
+app.include_router(accounting.router, prefix="/api/v1", tags=["accounting"])
 
 
 # ルートエンドポイント
