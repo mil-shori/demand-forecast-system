@@ -61,6 +61,10 @@ class Settings(BaseSettings):
     freee_api_base_url: str = "https://api.freee.co.jp"
     freee_auth_base_url: str = "https://accounts.secure.freee.co.jp"
     frontend_base_url: str = "http://localhost:3000"
+
+    # Claude API（AI機能: 勘定科目推定・月次サマリー生成）
+    anthropic_api_key: str = ""
+    anthropic_model: str = "claude-opus-4-8"
     
     @validator('allowed_origins', pre=True)
     def parse_cors_origins(cls, v):

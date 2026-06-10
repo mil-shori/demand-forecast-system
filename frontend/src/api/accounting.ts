@@ -227,6 +227,35 @@ export const downloadMonthlyReport = async (
   URL.revokeObjectURL(url)
 }
 
+// --- AI機能（Claude API） ---
+
+export interface AiStatus {
+  configured: boolean
+  model: string | null
+}
+
+export interface MonthlySummary {
+  year: number
+  month: number
+  summary: string
+}
+
+export const fetchAiStatus = async (): Promise<AiStatus> => {
+  const response = await apiClient.get('/accounting/ai/status')
+  return response.data
+}
+
+export const fetchMonthlySummary = async (
+  year: number,
+  month: number
+): Promise<MonthlySummary> => {
+  const response = await apiClient.get('/accounting/ai/monthly-summary', {
+    params: { year, month },
+    timeout: 180000, // AI生成は時間がかかる場合がある
+  })
+  return response.data
+}
+
 export const fetchTrialBalance = async (
   year: number,
   month: number,

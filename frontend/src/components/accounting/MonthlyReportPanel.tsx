@@ -1,8 +1,14 @@
 import React, { useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { DocumentArrowDownIcon } from '@heroicons/react/24/outline'
-import { downloadMonthlyReport, fetchTrialBalance, fetchFreeeStatus } from '../../api/accounting'
+import { DocumentArrowDownIcon, SparklesIcon } from '@heroicons/react/24/outline'
+import {
+  downloadMonthlyReport,
+  fetchTrialBalance,
+  fetchFreeeStatus,
+  fetchAiStatus,
+  fetchMonthlySummary,
+} from '../../api/accounting'
 
 const MonthlyReportPanel: React.FC = () => {
   const now = new Date()
@@ -13,6 +19,18 @@ const MonthlyReportPanel: React.FC = () => {
   const { data: freeeStatus } = useQuery({
     queryKey: ['freeeStatus'],
     queryFn: fetchFreeeStatus,
+  })
+
+  const { data: aiStatus } = useQuery({
+    queryKey: ['aiStatus'],
+    queryFn: fetchAiStatus,
+  })
+
+  const summaryMutation = useMutation({
+    mutationFn: () => fetchMonthlySummary(year, month),
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.detail ?? 'AIサマリーの生成に失敗しました')
+    },
   })
 
   const downloadMutation = useMutation({
@@ -92,6 +110,43 @@ const MonthlyReportPanel: React.FC = () => {
               CSVダウンロード
             </button>
           </div>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-header">
+          <div className="flex items-center">
+            <SparklesIcon className="h-5 w-5 text-primary-600 mr-2" />
+            <h3 className="text-lg font-medium text-gray-900">AIサマリー（Claude）</h3>
+          </div>
+        </div>
+        <div className="card-body space-y-4">
+          {aiStatus?.configured ? (
+            <>
+              <p className="text-sm text-gray-500">
+                {year}年{month}月の売上・経費・同期状況をAIが分析し、経営者向けのサマリーを生成します。
+              </p>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => summaryMutation.mutate()}
+                disabled={summaryMutation.isPending}
+              >
+                <SparklesIcon className="h-5 w-5 mr-1 inline" />
+                {summaryMutation.isPending ? 'AIが分析中...' : 'AIサマリーを生成'}
+              </button>
+              {summaryMutation.data && (
+                <div className="bg-gray-50 rounded-md p-4 text-sm text-gray-800 whitespace-pre-wrap">
+                  {summaryMutation.data.summary}
+                </div>
+              )}
+            </>
+          ) : (
+            <p className="text-sm text-gray-500">
+              AI機能を使うには backend/.env に ANTHROPIC_API_KEY を設定してください
+              （backend/env.freee.example 参照）。
+            </p>
+          )}
         </div>
       </div>
 
