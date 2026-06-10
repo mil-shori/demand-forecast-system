@@ -176,10 +176,9 @@ class ProductSet(Base):
     set_product = relationship("Product", foreign_keys=[set_sku], back_populates="set_components")
     component_product = relationship("Product", foreign_keys=[component_sku], back_populates="component_of_sets")
     
-    # 制約
+    # 制約（set_skuのインデックスはカラム定義のindex=Trueで作成される）
     __table_args__ = (
         UniqueConstraint('set_sku', 'component_sku', name='uq_product_sets_sku_component'),
-        Index('ix_product_sets_set_sku', 'set_sku'),
     )
 
 
@@ -206,9 +205,8 @@ class UserProfile(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
-    # インデックス
+    # インデックス（emailはカラム定義のindex=Trueで作成される）
     __table_args__ = (
-        Index('ix_user_profiles_email', 'email'),
         Index('ix_user_profiles_segment', 'customer_segment'),
     )
 

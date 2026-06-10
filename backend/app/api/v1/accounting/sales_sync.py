@@ -28,14 +28,6 @@ class SalesSyncRequest(BaseModel):
     granularity: str = Field(default="daily", pattern="^(daily|monthly)$")
     dry_run: bool = True
 
-    @field_validator("end_date")
-    @classmethod
-    def validate_date_range(cls, v, info):
-        start = info.data.get("start_date")
-        if start and v < start:
-            raise ValueError("end_date は start_date 以降の日付を指定してください")
-        return v
-
 
 class JournalEntryResponse(BaseModel):
     id: int
@@ -65,6 +57,11 @@ async def sync_sales(request: SalesSyncRequest, db: Session = Depends(get_db)):
     注文データを集計してfreeeに収入取引として登録する。
     dry_run=true の場合は登録内容のプレビューのみ返す。
     """
+    if request.end_date < request.start_date:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="end_date は start_date 以降の日付を指定してください",
+        )
     if request.dry_run:
         entries = accounting_service.build_sales_journal_entries(
             db, request.start_date, request.end_date, request.granularity
