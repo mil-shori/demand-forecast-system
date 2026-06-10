@@ -26,6 +26,7 @@ from app.models import (
     OrderItem,
     OrderType,
 )
+from app.services import ai_service
 from app.services.freee_client import FreeeAPIClient, FreeeAPIError
 
 logger = logging.getLogger(__name__)
@@ -165,6 +166,7 @@ def build_sales_journal_entries(
         entries.append({
             "source_type": source_type,
             "source_key": source_key,
+            "category": order_type,
             "entry_date": agg["period"] if granularity == "daily" else f"{agg['period']}-01",
             "description": description,
             "amount": agg["amount"],
@@ -186,10 +188,37 @@ async def resolve_default_account_item_id(
 ) -> Optional[int]:
     """freeeの勘定科目一覧から名前一致でIDを解決する"""
     account_items = await client.get_account_items()
+    return _find_account_item_by_name(account_items, account_name)
+
+
+def _find_account_item_by_name(
+    account_items: List[Dict[str, Any]], account_name: str
+) -> Optional[int]:
     for item in account_items:
         if item.get("name") == account_name:
             return item.get("id")
     return None
+
+
+async def _ai_suggest_account_item(
+    account_items: List[Dict[str, Any]],
+    description: str,
+    category: str,
+    transaction_type: str,
+) -> Optional[ai_service.AccountItemSuggestion]:
+    """AI推定（未設定・失敗時はNoneを返し、呼び出し側がデフォルト科目にフォールバックする）"""
+    if not ai_service.is_configured():
+        return None
+    try:
+        return await ai_service.suggest_account_item(
+            description=description,
+            category=category,
+            transaction_type=transaction_type,
+            account_items=account_items,
+        )
+    except Exception as e:
+        logger.warning(f"AI account item suggestion failed, falling back to default: {e}")
+        return None
 
 
 def _build_deal_payload(
@@ -235,6 +264,7 @@ async def sync_sales_to_freee(
     """
     candidates = build_sales_journal_entries(db, start_date, end_date, granularity)
     default_account_item_id: Optional[int] = None
+    account_items_cache: Optional[List[Dict[str, Any]]] = None
 
     synced, skipped, failed = 0, 0, 0
     results = []
@@ -269,17 +299,29 @@ async def sync_sales_to_freee(
         try:
             account_item_id = candidate["account_item_id"]
             if account_item_id is None:
-                # マッピング未定義 → デフォルト勘定科目を名前解決（1回だけ取得）
-                if default_account_item_id is None:
-                    default_account_item_id = await resolve_default_account_item_id(
-                        client, DEFAULT_SALES_ACCOUNT_NAME
-                    )
-                if default_account_item_id is None:
-                    raise ValueError(
-                        f"勘定科目マッピングが未定義で、freee側に「{DEFAULT_SALES_ACCOUNT_NAME}」も見つかりません。"
-                        "マッピングを登録してください。"
-                    )
-                account_item_id = default_account_item_id
+                # マッピング未定義 → AI推定（設定時）→ デフォルト勘定科目の順でフォールバック
+                if account_items_cache is None:
+                    account_items_cache = await client.get_account_items()
+                suggestion = await _ai_suggest_account_item(
+                    account_items_cache,
+                    description=candidate["description"],
+                    category=candidate["category"],
+                    transaction_type="income",
+                )
+                if suggestion is not None:
+                    account_item_id = suggestion.account_item_id
+                    candidate["account_item_name"] = suggestion.account_item_name
+                else:
+                    if default_account_item_id is None:
+                        default_account_item_id = _find_account_item_by_name(
+                            account_items_cache, DEFAULT_SALES_ACCOUNT_NAME
+                        )
+                    if default_account_item_id is None:
+                        raise ValueError(
+                            f"勘定科目マッピングが未定義で、freee側に「{DEFAULT_SALES_ACCOUNT_NAME}」も見つかりません。"
+                            "マッピングを登録してください。"
+                        )
+                    account_item_id = default_account_item_id
 
             payload = _build_deal_payload(
                 issue_date=candidate["entry_date"],
@@ -345,14 +387,27 @@ async def sync_expense_to_freee(
             tax_code = mapping.freee_tax_code
             partner_id = mapping.freee_partner_id
         else:
-            account_item_id = await resolve_default_account_item_id(client, DEFAULT_EXPENSE_ACCOUNT_NAME)
+            # マッピング未定義 → AI推定（設定時）→ デフォルト勘定科目の順でフォールバック
             tax_code = None
             partner_id = None
-            if account_item_id is None:
-                raise ValueError(
-                    f"経費カテゴリ「{expense.category}」のマッピングが未定義で、"
-                    f"freee側に「{DEFAULT_EXPENSE_ACCOUNT_NAME}」も見つかりません。"
+            account_items = await client.get_account_items()
+            suggestion = await _ai_suggest_account_item(
+                account_items,
+                description=expense.description or "",
+                category=expense.category,
+                transaction_type="expense",
+            )
+            if suggestion is not None:
+                account_item_id = suggestion.account_item_id
+            else:
+                account_item_id = _find_account_item_by_name(
+                    account_items, DEFAULT_EXPENSE_ACCOUNT_NAME
                 )
+                if account_item_id is None:
+                    raise ValueError(
+                        f"経費カテゴリ「{expense.category}」のマッピングが未定義で、"
+                        f"freee側に「{DEFAULT_EXPENSE_ACCOUNT_NAME}」も見つかりません。"
+                    )
 
         description = f"{expense.category} {expense.description or ''}".strip()
         payload = _build_deal_payload(

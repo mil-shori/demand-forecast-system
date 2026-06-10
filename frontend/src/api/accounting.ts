@@ -245,6 +245,26 @@ export const fetchAiStatus = async (): Promise<AiStatus> => {
   return response.data
 }
 
+export interface AccountItemSuggestion {
+  account_item_id: number
+  account_item_name: string
+  confidence: number
+  reason: string
+}
+
+export const suggestAccountItem = async (input: {
+  category: string
+  description?: string
+  transaction_type?: 'income' | 'expense'
+}): Promise<AccountItemSuggestion> => {
+  const response = await apiClient.post(
+    '/accounting/ai/suggest-account-item',
+    { transaction_type: 'expense', description: '', ...input },
+    { timeout: 120000 }
+  )
+  return response.data
+}
+
 export const fetchMonthlySummary = async (
   year: number,
   month: number

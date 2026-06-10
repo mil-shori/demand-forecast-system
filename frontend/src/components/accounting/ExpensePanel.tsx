@@ -1,12 +1,14 @@
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { CloudArrowUpIcon, TrashIcon } from '@heroicons/react/24/outline'
+import { CloudArrowUpIcon, SparklesIcon, TrashIcon } from '@heroicons/react/24/outline'
 import {
   fetchExpenses,
   createExpense,
   deleteExpense,
   syncExpense,
+  fetchAiStatus,
+  suggestAccountItem,
   ExpenseInput,
 } from '../../api/accounting'
 
@@ -39,6 +41,23 @@ const ExpensePanel: React.FC = () => {
   const { data: expenses } = useQuery({
     queryKey: ['expenses'],
     queryFn: () => fetchExpenses(),
+  })
+
+  const { data: aiStatus } = useQuery({
+    queryKey: ['aiStatus'],
+    queryFn: fetchAiStatus,
+  })
+
+  const aiSuggestMutation = useMutation({
+    mutationFn: () =>
+      suggestAccountItem({
+        category: form.category,
+        description: form.description ?? '',
+        transaction_type: 'expense',
+      }),
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.detail ?? 'AI推定に失敗しました')
+    },
   })
 
   const invalidate = () => {
@@ -167,9 +186,34 @@ const ExpensePanel: React.FC = () => {
                 />
               </div>
             </div>
-            <button type="submit" className="btn btn-primary" disabled={createMutation.isPending}>
-              登録
-            </button>
+            <div className="flex items-center space-x-3">
+              <button type="submit" className="btn btn-primary" disabled={createMutation.isPending}>
+                登録
+              </button>
+              {aiStatus?.configured && (
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => aiSuggestMutation.mutate()}
+                  disabled={aiSuggestMutation.isPending || !form.category}
+                  title="freee同期時の勘定科目をAIが推定します"
+                >
+                  <SparklesIcon className="h-5 w-5 mr-1 inline" />
+                  {aiSuggestMutation.isPending ? 'AI推定中...' : 'AIで勘定科目を推定'}
+                </button>
+              )}
+            </div>
+            {aiSuggestMutation.data && (
+              <div className="bg-primary-50 rounded-md p-3 text-sm text-gray-800">
+                <span className="font-medium">
+                  AI推定: {aiSuggestMutation.data.account_item_name}
+                </span>
+                <span className="ml-2 text-gray-500">
+                  （確信度 {Math.round(aiSuggestMutation.data.confidence * 100)}%）
+                </span>
+                <p className="mt-1 text-gray-600">{aiSuggestMutation.data.reason}</p>
+              </div>
+            )}
           </form>
         </div>
       </div>
