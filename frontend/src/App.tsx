@@ -1,4 +1,3 @@
-import React from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import Layout from './components/Layout'
@@ -6,6 +5,7 @@ import Dashboard from './pages/Dashboard'
 import DataManagement from './pages/DataManagement'
 import ForecastExecution from './pages/ForecastExecution'
 import ForecastResults from './pages/ForecastResults'
+import Accounting from './pages/Accounting'
 import Settings from './pages/Settings'
 import NotFound from './pages/NotFound'
 
@@ -20,6 +20,7 @@ function App() {
           <Route path="forecast" element={<ForecastExecution />} />
           <Route path="forecast/results" element={<ForecastResults />} />
           <Route path="forecast/results/:forecastId" element={<ForecastResults />} />
+          <Route path="accounting" element={<Accounting />} />
           <Route path="settings" element={<Settings />} />
         </Route>
         <Route path="*" element={<NotFound />} />

@@ -4,6 +4,7 @@ import {
   HomeIcon,
   DocumentArrowUpIcon,
   ChartBarIcon,
+  BanknotesIcon,
   Cog6ToothIcon,
   Bars3Icon,
   XMarkIcon,
@@ -16,6 +17,7 @@ const navigation = [
   { name: 'ダッシュボード', href: '/dashboard', icon: HomeIcon },
   { name: 'データ管理', href: '/data', icon: DocumentArrowUpIcon },
   { name: '予測実行', href: '/forecast', icon: ChartBarIcon },
+  { name: '経理', href: '/accounting', icon: BanknotesIcon },
   { name: '設定', href: '/settings', icon: Cog6ToothIcon },
 ]
 
