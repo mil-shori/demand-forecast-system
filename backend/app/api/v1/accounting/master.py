@@ -51,7 +51,9 @@ def _get_client(db: Session) -> FreeeAPIClient:
     try:
         return FreeeAPIClient(db)
     except FreeeNotConnectedError as e:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e)
+        )
 
 
 def _handle_freee_error(e: FreeeAPIError) -> None:
@@ -91,10 +93,14 @@ async def list_mappings(
     query = db.query(AccountItemMapping)
     if mapping_type:
         query = query.filter(AccountItemMapping.mapping_type == mapping_type)
-    return query.order_by(AccountItemMapping.priority.desc(), AccountItemMapping.id).all()
+    return query.order_by(
+        AccountItemMapping.priority.desc(), AccountItemMapping.id
+    ).all()
 
 
-@router.post("/mappings", response_model=MappingResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/mappings", response_model=MappingResponse, status_code=status.HTTP_201_CREATED
+)
 async def create_mapping(request: MappingRequest, db: Session = Depends(get_db)):
     """勘定科目マッピングを登録する"""
     mapping = AccountItemMapping(**request.model_dump())
@@ -116,9 +122,13 @@ async def update_mapping(
     mapping_id: int, request: MappingRequest, db: Session = Depends(get_db)
 ):
     """勘定科目マッピングを更新する"""
-    mapping = db.query(AccountItemMapping).filter(AccountItemMapping.id == mapping_id).first()
+    mapping = (
+        db.query(AccountItemMapping).filter(AccountItemMapping.id == mapping_id).first()
+    )
     if mapping is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="マッピングが見つかりません")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="マッピングが見つかりません"
+        )
     for key, value in request.model_dump().items():
         setattr(mapping, key, value)
     try:
@@ -136,9 +146,13 @@ async def update_mapping(
 @router.delete("/mappings/{mapping_id}")
 async def delete_mapping(mapping_id: int, db: Session = Depends(get_db)):
     """勘定科目マッピングを削除する"""
-    mapping = db.query(AccountItemMapping).filter(AccountItemMapping.id == mapping_id).first()
+    mapping = (
+        db.query(AccountItemMapping).filter(AccountItemMapping.id == mapping_id).first()
+    )
     if mapping is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="マッピングが見つかりません")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="マッピングが見つかりません"
+        )
     db.delete(mapping)
     db.commit()
     return {"deleted": mapping_id}

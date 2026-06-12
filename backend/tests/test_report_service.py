@@ -11,19 +11,48 @@ from app.services import report_service
 
 
 def _seed(db):
-    db.add_all([
-        Order(order_id="O1", user_id="U1", order_date=date(2026, 5, 1),
-              order_type=OrderType.SUBSCRIPTION, total_amount=Decimal("5000")),
-        Order(order_id="O2", user_id="U2", order_date=date(2026, 5, 2),
-              order_type=OrderType.ONEOFF, total_amount=Decimal("1500")),
-        # 集計対象外（6月）
-        Order(order_id="O3", user_id="U3", order_date=date(2026, 6, 1),
-              order_type=OrderType.ONEOFF, total_amount=Decimal("9999")),
-        Expense(expense_date=date(2026, 5, 10), amount=Decimal("1200"), category="交通費",
-                description="タクシー代", payment_method="cash", status=ExpenseStatus.DRAFT),
-        Expense(expense_date=date(2026, 5, 15), amount=Decimal("800"), category="会議費",
-                payment_method="credit_card", status=ExpenseStatus.SYNCED, freee_deal_id=1),
-    ])
+    db.add_all(
+        [
+            Order(
+                order_id="O1",
+                user_id="U1",
+                order_date=date(2026, 5, 1),
+                order_type=OrderType.SUBSCRIPTION,
+                total_amount=Decimal("5000"),
+            ),
+            Order(
+                order_id="O2",
+                user_id="U2",
+                order_date=date(2026, 5, 2),
+                order_type=OrderType.ONEOFF,
+                total_amount=Decimal("1500"),
+            ),
+            # 集計対象外（6月）
+            Order(
+                order_id="O3",
+                user_id="U3",
+                order_date=date(2026, 6, 1),
+                order_type=OrderType.ONEOFF,
+                total_amount=Decimal("9999"),
+            ),
+            Expense(
+                expense_date=date(2026, 5, 10),
+                amount=Decimal("1200"),
+                category="交通費",
+                description="タクシー代",
+                payment_method="cash",
+                status=ExpenseStatus.DRAFT,
+            ),
+            Expense(
+                expense_date=date(2026, 5, 15),
+                amount=Decimal("800"),
+                category="会議費",
+                payment_method="credit_card",
+                status=ExpenseStatus.SYNCED,
+                freee_deal_id=1,
+            ),
+        ]
+    )
     db.commit()
 
 
@@ -63,10 +92,12 @@ def test_generate_xlsx_sheets_and_values(db_session):
 
 def test_generate_xlsx_with_trial_pl(db_session):
     _seed(db_session)
-    trial_pl = {"balances": [
-        {"account_item_name": "売上高", "closing_balance": 6500},
-        {"account_item_name": "旅費交通費", "closing_balance": 1200},
-    ]}
+    trial_pl = {
+        "balances": [
+            {"account_item_name": "売上高", "closing_balance": 6500},
+            {"account_item_name": "旅費交通費", "closing_balance": 1200},
+        ]
+    }
     buffer = report_service.generate_monthly_report_xlsx(db_session, 2026, 5, trial_pl)
     wb = load_workbook(buffer)
     trial = wb["freee試算表"]

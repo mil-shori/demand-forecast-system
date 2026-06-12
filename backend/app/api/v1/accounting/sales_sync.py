@@ -87,7 +87,9 @@ async def sync_sales(request: SalesSyncRequest, db: Session = Depends(get_db)):
     try:
         client = FreeeAPIClient(db)
     except FreeeNotConnectedError as e:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e)
+        )
 
     result = await accounting_service.sync_sales_to_freee(
         db, client, request.start_date, request.end_date, request.granularity
@@ -130,7 +132,9 @@ async def retry_journal_entry(entry_id: int, db: Session = Depends(get_db)):
     if entry is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="仕訳が見つかりません")
     if entry.status == JournalEntryStatus.SYNCED:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="既にfreeeに登録済みです")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="既にfreeeに登録済みです"
+        )
     if not entry.details:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -140,7 +144,9 @@ async def retry_journal_entry(entry_id: int, db: Session = Depends(get_db)):
     try:
         client = FreeeAPIClient(db)
     except FreeeNotConnectedError as e:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e)
+        )
 
     from datetime import datetime, timezone
 

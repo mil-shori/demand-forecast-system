@@ -43,7 +43,9 @@ class MonthlySummaryResponse(BaseModel):
 
 def _handle_ai_errors(e: Exception) -> None:
     if isinstance(e, ai_service.AINotConfiguredError):
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e)
+        )
     if isinstance(e, anthropic.RateLimitError):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -87,7 +89,9 @@ async def suggest_account_item(
         client = FreeeAPIClient(db)
         account_items = await client.get_account_items()
     except FreeeNotConnectedError as e:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e)
+        )
     except FreeeAPIError as e:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
@@ -134,9 +138,15 @@ async def monthly_summary(
     prev_total = float(prev_data["total_sales"]) if prev_data["sales"] else None
 
     sync_stats = {
-        "synced": sum(1 for j in data["journal_entries"] if j.status == JournalEntryStatus.SYNCED),
-        "failed": sum(1 for j in data["journal_entries"] if j.status == JournalEntryStatus.FAILED),
-        "pending": sum(1 for j in data["journal_entries"] if j.status == JournalEntryStatus.PENDING),
+        "synced": sum(
+            1 for j in data["journal_entries"] if j.status == JournalEntryStatus.SYNCED
+        ),
+        "failed": sum(
+            1 for j in data["journal_entries"] if j.status == JournalEntryStatus.FAILED
+        ),
+        "pending": sum(
+            1 for j in data["journal_entries"] if j.status == JournalEntryStatus.PENDING
+        ),
     }
 
     try:

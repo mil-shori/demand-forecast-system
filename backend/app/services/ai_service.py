@@ -23,6 +23,7 @@ class AINotConfiguredError(Exception):
 
 class AccountItemSuggestion(BaseModel):
     """Claudeによる勘定科目推定の構造化出力"""
+
     account_item_id: int = Field(description="選択した勘定科目のID（候補一覧から選ぶこと）")
     account_item_name: str = Field(description="選択した勘定科目の名称")
     confidence: float = Field(description="推定の確信度（0.0〜1.0）")
@@ -35,9 +36,7 @@ def is_configured() -> bool:
 
 def _get_client() -> anthropic.AsyncAnthropic:
     if not settings.anthropic_api_key:
-        raise AINotConfiguredError(
-            "ANTHROPIC_API_KEY が未設定です。backend/.env に設定してください。"
-        )
+        raise AINotConfiguredError("ANTHROPIC_API_KEY が未設定です。backend/.env に設定してください。")
     return anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
 
 
@@ -114,14 +113,21 @@ async def generate_monthly_summary(
     """
     client = _get_client()
 
-    sales_lines = "\n".join(
-        f"- {s['period']} {s['order_type']}: ¥{float(s['amount']):,.0f}（{s['order_count']}件）"
-        for s in sales
-    ) or "（売上データなし）"
-    expense_lines = "\n".join(
-        f"- {e['category']}: ¥{float(e['amount']):,.0f}（{e['count']}件）"
-        for e in expense_by_category
-    ) or "（経費データなし）"
+    sales_lines = (
+        "\n".join(
+            f"- {s['period']} {s['order_type']}: "
+            f"¥{float(s['amount']):,.0f}（{s['order_count']}件）"
+            for s in sales
+        )
+        or "（売上データなし）"
+    )
+    expense_lines = (
+        "\n".join(
+            f"- {e['category']}: ¥{float(e['amount']):,.0f}（{e['count']}件）"
+            for e in expense_by_category
+        )
+        or "（経費データなし）"
+    )
     prev_line = (
         f"前月の売上合計: ¥{prev_month_sales:,.0f}\n" if prev_month_sales is not None else ""
     )
@@ -148,7 +154,8 @@ async def generate_monthly_summary(
                     f"日別売上:\n{sales_lines}\n\n"
                     f"経費カテゴリ別:\n{expense_lines}\n\n"
                     f"freee同期状況: 登録済み{sync_stats.get('synced', 0)}件 / "
-                    f"失敗{sync_stats.get('failed', 0)}件 / 未送信{sync_stats.get('pending', 0)}件"
+                    f"失敗{sync_stats.get('failed', 0)}件 / "
+                    f"未送信{sync_stats.get('pending', 0)}件"
                 ),
             }
         ],

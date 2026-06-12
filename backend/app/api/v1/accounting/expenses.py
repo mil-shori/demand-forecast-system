@@ -27,7 +27,9 @@ class ExpenseRequest(BaseModel):
     amount: float = Field(..., gt=0)
     category: str = Field(..., min_length=1, max_length=100)
     description: Optional[str] = None
-    payment_method: str = Field(default="cash", pattern="^(cash|credit_card|bank_transfer)$")
+    payment_method: str = Field(
+        default="cash", pattern="^(cash|credit_card|bank_transfer)$"
+    )
     partner_name: Optional[str] = None
 
 
@@ -81,7 +83,9 @@ async def list_expenses(
     )
 
 
-@router.post("/expenses", response_model=ExpenseResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/expenses", response_model=ExpenseResponse, status_code=status.HTTP_201_CREATED
+)
 async def create_expense(request: ExpenseRequest, db: Session = Depends(get_db)):
     """経費を登録する"""
     expense = Expense(**request.model_dump(), status=ExpenseStatus.DRAFT)
@@ -128,12 +132,16 @@ async def sync_expense(expense_id: int, db: Session = Depends(get_db)):
     """経費1件をfreeeに支出取引として登録する"""
     expense = _get_expense(db, expense_id)
     if expense.status == ExpenseStatus.SYNCED:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="既にfreeeに登録済みです")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="既にfreeeに登録済みです"
+        )
 
     try:
         client = FreeeAPIClient(db)
     except FreeeNotConnectedError as e:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e)
+        )
 
     try:
         expense = await accounting_service.sync_expense_to_freee(db, client, expense)

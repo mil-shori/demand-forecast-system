@@ -1,9 +1,9 @@
 """
 freee OAuth2トークンの保存・取得（Fernet暗号化）
 """
+import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional
-import logging
 
 from cryptography.fernet import Fernet
 from sqlalchemy.orm import Session
@@ -25,7 +25,8 @@ def _get_fernet() -> Fernet:
     if not settings.data_encryption_key:
         raise EncryptionKeyMissingError(
             "DATA_ENCRYPTION_KEY が未設定です。"
-            'python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())" '
+            'python -c "from cryptography.fernet import Fernet; '
+            'print(Fernet.generate_key().decode())" '
             "で生成して .env に設定してください。"
         )
     return Fernet(settings.data_encryption_key.encode())
@@ -65,7 +66,9 @@ def save_token(
         db.add(token)
         # 初回接続の事業所は、他にアクティブな事業所がなければアクティブにする
         if is_active is None:
-            has_active = db.query(FreeeToken).filter(FreeeToken.is_active == True).count() > 0  # noqa: E712
+            has_active = (
+                db.query(FreeeToken).filter(FreeeToken.is_active.is_(True)).count() > 0
+            )
             is_active = not has_active
 
     token.access_token = encrypt_token(access_token)
@@ -80,13 +83,16 @@ def save_token(
 
     db.commit()
     db.refresh(token)
-    logger.info(f"freee token saved for company_id={company_id} (expires_at={expires_at.isoformat()})")
+    logger.info(
+        f"freee token saved for company_id={company_id} "
+        f"(expires_at={expires_at.isoformat()})"
+    )
     return token
 
 
 def get_active_token(db: Session) -> Optional[FreeeToken]:
     """現在選択中（is_active）の事業所トークンを取得"""
-    return db.query(FreeeToken).filter(FreeeToken.is_active == True).first()  # noqa: E712
+    return db.query(FreeeToken).filter(FreeeToken.is_active.is_(True)).first()
 
 
 def get_token_by_company(db: Session, company_id: int) -> Optional[FreeeToken]:
@@ -113,7 +119,9 @@ def delete_all_tokens(db: Session) -> int:
     return count
 
 
-def is_token_expiring(token: FreeeToken, margin_seconds: int = TOKEN_REFRESH_MARGIN_SECONDS) -> bool:
+def is_token_expiring(
+    token: FreeeToken, margin_seconds: int = TOKEN_REFRESH_MARGIN_SECONDS
+) -> bool:
     """トークンが期限切れ間近（または期限切れ）か判定"""
     expires_at = token.expires_at
     if expires_at.tzinfo is None:

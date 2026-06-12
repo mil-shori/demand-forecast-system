@@ -55,7 +55,9 @@ class AccountItemResolver:
             .all()
         )
 
-    def resolve(self, source_key: str, description: str = "") -> Optional[AccountItemMapping]:
+    def resolve(
+        self, source_key: str, description: str = ""
+    ) -> Optional[AccountItemMapping]:
         """
         勘定科目を推定する。
         1. source_key の完全一致
@@ -97,7 +99,8 @@ def aggregate_sales(
         db.query(
             OrderItem.order_id.label("order_id"),
             func.sum(
-                OrderItem.quantity * func.coalesce(OrderItem.unit_price, 0)
+                OrderItem.quantity
+                * func.coalesce(OrderItem.unit_price, 0)
                 * (1 - func.coalesce(OrderItem.discount_rate, 0))
             ).label("items_amount"),
         )
@@ -124,12 +127,16 @@ def aggregate_sales(
     results = []
     for row in rows:
         period = row.period if isinstance(row.period, str) else row.period.isoformat()
-        results.append({
-            "period": period,
-            "order_type": row.order_type.value if hasattr(row.order_type, "value") else str(row.order_type),
-            "amount": Decimal(row.amount or 0).quantize(Decimal("0.01")),
-            "order_count": row.order_count,
-        })
+        results.append(
+            {
+                "period": period,
+                "order_type": row.order_type.value
+                if hasattr(row.order_type, "value")
+                else str(row.order_type),
+                "amount": Decimal(row.amount or 0).quantize(Decimal("0.01")),
+                "order_count": row.order_count,
+            }
+        )
     return results
 
 
@@ -158,28 +165,38 @@ def build_sales_journal_entries(
 
         existing = (
             db.query(JournalEntry)
-            .filter(JournalEntry.source_type == source_type, JournalEntry.source_key == source_key)
+            .filter(
+                JournalEntry.source_type == source_type,
+                JournalEntry.source_key == source_key,
+            )
             .first()
         )
 
         mapping = resolver.resolve(order_type, description)
-        entries.append({
-            "source_type": source_type,
-            "source_key": source_key,
-            "category": order_type,
-            "entry_date": agg["period"] if granularity == "daily" else f"{agg['period']}-01",
-            "description": description,
-            "amount": agg["amount"],
-            "order_count": agg["order_count"],
-            "account_item_id": mapping.freee_account_item_id if mapping else None,
-            "account_item_name": (
-                mapping.freee_account_item_name if mapping else DEFAULT_SALES_ACCOUNT_NAME
-            ),
-            "tax_code": mapping.freee_tax_code if mapping else None,
-            "partner_id": mapping.freee_partner_id if mapping else None,
-            "already_synced": existing is not None and existing.status == JournalEntryStatus.SYNCED,
-            "existing_status": existing.status.value if existing else None,
-        })
+        entries.append(
+            {
+                "source_type": source_type,
+                "source_key": source_key,
+                "category": order_type,
+                "entry_date": agg["period"]
+                if granularity == "daily"
+                else f"{agg['period']}-01",
+                "description": description,
+                "amount": agg["amount"],
+                "order_count": agg["order_count"],
+                "account_item_id": mapping.freee_account_item_id if mapping else None,
+                "account_item_name": (
+                    mapping.freee_account_item_name
+                    if mapping
+                    else DEFAULT_SALES_ACCOUNT_NAME
+                ),
+                "tax_code": mapping.freee_tax_code if mapping else None,
+                "partner_id": mapping.freee_partner_id if mapping else None,
+                "already_synced": existing is not None
+                and existing.status == JournalEntryStatus.SYNCED,
+                "existing_status": existing.status.value if existing else None,
+            }
+        )
     return entries
 
 
@@ -217,7 +234,9 @@ async def _ai_suggest_account_item(
             account_items=account_items,
         )
     except Exception as e:
-        logger.warning(f"AI account item suggestion failed, falling back to default: {e}")
+        logger.warning(
+            f"AI account item suggestion failed, falling back to default: {e}"
+        )
         return None
 
 
@@ -318,7 +337,8 @@ async def sync_sales_to_freee(
                         )
                     if default_account_item_id is None:
                         raise ValueError(
-                            f"勘定科目マッピングが未定義で、freee側に「{DEFAULT_SALES_ACCOUNT_NAME}」も見つかりません。"
+                            f"勘定科目マッピングが未定義で、freee側に"
+                            f"「{DEFAULT_SALES_ACCOUNT_NAME}」も見つかりません。"
                             "マッピングを登録してください。"
                         )
                     account_item_id = default_account_item_id
@@ -340,7 +360,13 @@ async def sync_sales_to_freee(
             entry.error_message = None
             entry.synced_at = datetime.now(timezone.utc)
             synced += 1
-            results.append({**_summary(candidate), "status": "synced", "freee_deal_id": entry.freee_deal_id})
+            results.append(
+                {
+                    **_summary(candidate),
+                    "status": "synced",
+                    "freee_deal_id": entry.freee_deal_id,
+                }
+            )
         except (FreeeAPIError, ValueError) as e:
             entry.status = JournalEntryStatus.FAILED
             entry.error_message = str(e)[:2000]
@@ -427,7 +453,10 @@ async def sync_expense_to_freee(
         source_key = f"expense:{expense.id}"
         entry = (
             db.query(JournalEntry)
-            .filter(JournalEntry.source_type == "expense", JournalEntry.source_key == source_key)
+            .filter(
+                JournalEntry.source_type == "expense",
+                JournalEntry.source_key == source_key,
+            )
             .first()
         )
         if entry is None:

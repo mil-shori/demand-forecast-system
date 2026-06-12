@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional
 from urllib.parse import urlencode
 
 import httpx
-from jose import jwt, JWTError
+from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -52,7 +52,8 @@ def generate_state_token() -> str:
     """CSRF対策用のstate（secret_keyで署名したJWT、有効期限10分）"""
     payload = {
         "purpose": "freee_oauth_state",
-        "exp": datetime.now(timezone.utc) + timedelta(minutes=STATE_TOKEN_EXPIRE_MINUTES),
+        "exp": datetime.now(timezone.utc)
+        + timedelta(minutes=STATE_TOKEN_EXPIRE_MINUTES),
     }
     return jwt.encode(payload, settings.secret_key, algorithm=settings.algorithm)
 
@@ -60,7 +61,9 @@ def generate_state_token() -> str:
 def verify_state_token(state: str) -> bool:
     """stateの署名・有効期限を検証"""
     try:
-        payload = jwt.decode(state, settings.secret_key, algorithms=[settings.algorithm])
+        payload = jwt.decode(
+            state, settings.secret_key, algorithms=[settings.algorithm]
+        )
         return payload.get("purpose") == "freee_oauth_state"
     except JWTError:
         return False
@@ -89,23 +92,27 @@ class FreeeOAuthClient:
     async def exchange_code(self, code: str) -> Dict[str, Any]:
         """認可コードをトークンに交換"""
         _ensure_configured()
-        return await self._token_request({
-            "grant_type": "authorization_code",
-            "client_id": self.client_id,
-            "client_secret": self.client_secret,
-            "code": code,
-            "redirect_uri": self.redirect_uri,
-        })
+        return await self._token_request(
+            {
+                "grant_type": "authorization_code",
+                "client_id": self.client_id,
+                "client_secret": self.client_secret,
+                "code": code,
+                "redirect_uri": self.redirect_uri,
+            }
+        )
 
     async def refresh(self, refresh_token: str) -> Dict[str, Any]:
         """リフレッシュトークンでアクセストークンを更新"""
         _ensure_configured()
-        return await self._token_request({
-            "grant_type": "refresh_token",
-            "client_id": self.client_id,
-            "client_secret": self.client_secret,
-            "refresh_token": refresh_token,
-        })
+        return await self._token_request(
+            {
+                "grant_type": "refresh_token",
+                "client_id": self.client_id,
+                "client_secret": self.client_secret,
+                "refresh_token": refresh_token,
+            }
+        )
 
     async def _token_request(self, data: Dict[str, str]) -> Dict[str, Any]:
         async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
@@ -115,7 +122,9 @@ class FreeeOAuthClient:
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
             )
         if response.status_code != 200:
-            logger.error(f"freee token request failed: {response.status_code} {response.text}")
+            logger.error(
+                f"freee token request failed: {response.status_code} {response.text}"
+            )
             raise FreeeAPIError(response.status_code, response.text)
         return response.json()
 
@@ -186,7 +195,10 @@ class FreeeAPIClient:
             response = await self._send(method, path, access_token, params, json_body)
 
         if response.status_code >= 400:
-            logger.error(f"freee API error: {method} {path} -> {response.status_code} {response.text}")
+            logger.error(
+                f"freee API error: {method} {path} -> "
+                f"{response.status_code} {response.text}"
+            )
             raise FreeeAPIError(response.status_code, response.text)
 
         if not response.content:
@@ -222,7 +234,9 @@ class FreeeAPIClient:
 
     async def get_account_items(self) -> List[Dict[str, Any]]:
         """勘定科目一覧"""
-        data = await self.request("GET", "/api/1/account_items", params={"company_id": self.company_id})
+        data = await self.request(
+            "GET", "/api/1/account_items", params={"company_id": self.company_id}
+        )
         return data.get("account_items", [])
 
     async def get_partners(self, keyword: Optional[str] = None) -> List[Dict[str, Any]]:
@@ -244,8 +258,11 @@ class FreeeAPIClient:
         data = await self.request("POST", "/api/1/deals", json_body=payload)
         return data.get("deal", {})
 
-    async def get_deals(self, start_issue_date: Optional[str] = None,
-                        end_issue_date: Optional[str] = None) -> List[Dict[str, Any]]:
+    async def get_deals(
+        self,
+        start_issue_date: Optional[str] = None,
+        end_issue_date: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
         """取引一覧"""
         params: Dict[str, Any] = {"company_id": self.company_id, "limit": 100}
         if start_issue_date:
@@ -255,22 +272,34 @@ class FreeeAPIClient:
         data = await self.request("GET", "/api/1/deals", params=params)
         return data.get("deals", [])
 
-    async def get_trial_pl(self, fiscal_year: int, start_month: int, end_month: int) -> Dict[str, Any]:
+    async def get_trial_pl(
+        self, fiscal_year: int, start_month: int, end_month: int
+    ) -> Dict[str, Any]:
         """損益計算書（試算表）"""
-        data = await self.request("GET", "/api/1/reports/trial_pl", params={
-            "company_id": self.company_id,
-            "fiscal_year": fiscal_year,
-            "start_month": start_month,
-            "end_month": end_month,
-        })
+        data = await self.request(
+            "GET",
+            "/api/1/reports/trial_pl",
+            params={
+                "company_id": self.company_id,
+                "fiscal_year": fiscal_year,
+                "start_month": start_month,
+                "end_month": end_month,
+            },
+        )
         return data.get("trial_pl", {})
 
-    async def get_trial_bs(self, fiscal_year: int, start_month: int, end_month: int) -> Dict[str, Any]:
+    async def get_trial_bs(
+        self, fiscal_year: int, start_month: int, end_month: int
+    ) -> Dict[str, Any]:
         """貸借対照表（試算表）"""
-        data = await self.request("GET", "/api/1/reports/trial_bs", params={
-            "company_id": self.company_id,
-            "fiscal_year": fiscal_year,
-            "start_month": start_month,
-            "end_month": end_month,
-        })
+        data = await self.request(
+            "GET",
+            "/api/1/reports/trial_bs",
+            params={
+                "company_id": self.company_id,
+                "fiscal_year": fiscal_year,
+                "start_month": start_month,
+                "end_month": end_month,
+            },
+        )
         return data.get("trial_bs", {})

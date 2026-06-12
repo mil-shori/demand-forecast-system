@@ -51,7 +51,10 @@ def _check_configured() -> None:
     if not settings.freee_client_id or not settings.freee_client_secret:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="freee連携が未設定です。FREEE_CLIENT_ID / FREEE_CLIENT_SECRET を backend/.env に設定してください。",
+            detail=(
+                "freee連携が未設定です。"
+                "FREEE_CLIENT_ID / FREEE_CLIENT_SECRET を backend/.env に設定してください。"
+            ),
         )
     if not settings.data_encryption_key:
         raise HTTPException(
@@ -69,7 +72,9 @@ async def get_auth_url():
         state = generate_state_token()
         return AuthUrlResponse(auth_url=oauth.build_authorize_url(state))
     except FreeeNotConfiguredError as e:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e)
+        )
 
 
 @router.get("/freee/callback")
@@ -87,7 +92,9 @@ async def freee_callback(code: str, state: str, db: Session = Depends(get_db)):
         token_data = await oauth.exchange_code(code)
     except FreeeAPIError as e:
         logger.error(f"freee token exchange failed: {e}")
-        return RedirectResponse(f"{settings.frontend_base_url}/accounting?connected=0&error=token_exchange")
+        return RedirectResponse(
+            f"{settings.frontend_base_url}/accounting?connected=0&error=token_exchange"
+        )
 
     # 事業所一覧を取得して全事業所分のトークンを保存
     access_token = token_data["access_token"]
@@ -128,9 +135,13 @@ async def freee_callback(code: str, state: str, db: Session = Depends(get_db)):
                 scope=token_data.get("scope"),
             )
         else:
-            return RedirectResponse(f"{settings.frontend_base_url}/accounting?connected=0&error=no_company")
+            return RedirectResponse(
+                f"{settings.frontend_base_url}/accounting?connected=0&error=no_company"
+            )
     except EncryptionKeyMissingError as e:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e)
+        )
 
     return RedirectResponse(f"{settings.frontend_base_url}/accounting?connected=1")
 
@@ -139,7 +150,9 @@ async def freee_callback(code: str, state: str, db: Session = Depends(get_db)):
 async def freee_status(db: Session = Depends(get_db)):
     """freee接続状態と事業所一覧を返す"""
     configured = bool(
-        settings.freee_client_id and settings.freee_client_secret and settings.data_encryption_key
+        settings.freee_client_id
+        and settings.freee_client_secret
+        and settings.data_encryption_key
     )
     tokens = db.query(FreeeToken).order_by(FreeeToken.company_id).all()
     return FreeeStatusResponse(

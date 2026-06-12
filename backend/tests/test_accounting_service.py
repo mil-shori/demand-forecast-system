@@ -28,19 +28,48 @@ API_BASE = settings.freee_api_base_url
 
 def _seed_orders(db):
     db.add(Product(sku="VEG001", product_name="野菜セット"))
-    db.add_all([
-        Order(order_id="O1", user_id="U1", order_date=date(2026, 5, 1),
-              order_type=OrderType.SUBSCRIPTION, total_amount=Decimal("3000")),
-        Order(order_id="O2", user_id="U2", order_date=date(2026, 5, 1),
-              order_type=OrderType.SUBSCRIPTION, total_amount=Decimal("2000")),
-        Order(order_id="O3", user_id="U3", order_date=date(2026, 5, 1),
-              order_type=OrderType.ONEOFF, total_amount=Decimal("1500")),
-        # total_amount NULL → 明細からフォールバック集計される注文
-        Order(order_id="O4", user_id="U4", order_date=date(2026, 5, 2),
-              order_type=OrderType.ONEOFF, total_amount=None),
-    ])
-    db.add(OrderItem(order_id="O4", sku="VEG001", quantity=2,
-                     unit_price=Decimal("1000"), discount_rate=Decimal("0.1")))
+    db.add_all(
+        [
+            Order(
+                order_id="O1",
+                user_id="U1",
+                order_date=date(2026, 5, 1),
+                order_type=OrderType.SUBSCRIPTION,
+                total_amount=Decimal("3000"),
+            ),
+            Order(
+                order_id="O2",
+                user_id="U2",
+                order_date=date(2026, 5, 1),
+                order_type=OrderType.SUBSCRIPTION,
+                total_amount=Decimal("2000"),
+            ),
+            Order(
+                order_id="O3",
+                user_id="U3",
+                order_date=date(2026, 5, 1),
+                order_type=OrderType.ONEOFF,
+                total_amount=Decimal("1500"),
+            ),
+            # total_amount NULL → 明細からフォールバック集計される注文
+            Order(
+                order_id="O4",
+                user_id="U4",
+                order_date=date(2026, 5, 2),
+                order_type=OrderType.ONEOFF,
+                total_amount=None,
+            ),
+        ]
+    )
+    db.add(
+        OrderItem(
+            order_id="O4",
+            sku="VEG001",
+            quantity=2,
+            unit_price=Decimal("1000"),
+            discount_rate=Decimal("0.1"),
+        )
+    )
     db.commit()
 
 
@@ -69,13 +98,24 @@ def test_aggregate_sales_monthly(db_session):
 
 
 def test_resolver_exact_match_wins_over_keywords(db_session):
-    db_session.add_all([
-        AccountItemMapping(mapping_type=MappingType.SALES_CATEGORY, source_key="subscription",
-                           freee_account_item_id=10, freee_account_item_name="売上高（定期）"),
-        AccountItemMapping(mapping_type=MappingType.SALES_CATEGORY, source_key="other",
-                           keywords="subscription,定期", priority=100,
-                           freee_account_item_id=20, freee_account_item_name="その他売上"),
-    ])
+    db_session.add_all(
+        [
+            AccountItemMapping(
+                mapping_type=MappingType.SALES_CATEGORY,
+                source_key="subscription",
+                freee_account_item_id=10,
+                freee_account_item_name="売上高（定期）",
+            ),
+            AccountItemMapping(
+                mapping_type=MappingType.SALES_CATEGORY,
+                source_key="other",
+                keywords="subscription,定期",
+                priority=100,
+                freee_account_item_id=20,
+                freee_account_item_name="その他売上",
+            ),
+        ]
+    )
     db_session.commit()
     resolver = AccountItemResolver(db_session, MappingType.SALES_CATEGORY)
     assert resolver.resolve("subscription").freee_account_item_id == 10
@@ -83,9 +123,13 @@ def test_resolver_exact_match_wins_over_keywords(db_session):
 
 def test_resolver_keyword_match(db_session):
     db_session.add(
-        AccountItemMapping(mapping_type=MappingType.EXPENSE_CATEGORY, source_key="交通費",
-                           keywords="タクシー,電車,バス",
-                           freee_account_item_id=30, freee_account_item_name="旅費交通費")
+        AccountItemMapping(
+            mapping_type=MappingType.EXPENSE_CATEGORY,
+            source_key="交通費",
+            keywords="タクシー,電車,バス",
+            freee_account_item_id=30,
+            freee_account_item_name="旅費交通費",
+        )
     )
     db_session.commit()
     resolver = AccountItemResolver(db_session, MappingType.EXPENSE_CATEGORY)
@@ -96,11 +140,16 @@ def test_resolver_keyword_match(db_session):
 
 def test_build_sales_journal_entries_marks_synced(db_session):
     _seed_orders(db_session)
-    db_session.add(JournalEntry(
-        source_type="sales_daily", source_key="2026-05-01:subscription",
-        entry_type="sales", entry_date=date(2026, 5, 1), amount=Decimal("5000"),
-        status=JournalEntryStatus.SYNCED,
-    ))
+    db_session.add(
+        JournalEntry(
+            source_type="sales_daily",
+            source_key="2026-05-01:subscription",
+            entry_type="sales",
+            entry_date=date(2026, 5, 1),
+            amount=Decimal("5000"),
+            status=JournalEntryStatus.SYNCED,
+        )
+    )
     db_session.commit()
 
     entries = accounting_service.build_sales_journal_entries(
@@ -116,17 +165,31 @@ def test_build_sales_journal_entries_marks_synced(db_session):
 async def test_sync_sales_to_freee_idempotent(db_session):
     """同期→再同期で二重登録されないこと（冪等性）"""
     _seed_orders(db_session)
-    db_session.add(AccountItemMapping(
-        mapping_type=MappingType.SALES_CATEGORY, source_key="subscription",
-        freee_account_item_id=10, freee_account_item_name="売上高", freee_tax_code=21,
-    ))
-    db_session.add(AccountItemMapping(
-        mapping_type=MappingType.SALES_CATEGORY, source_key="oneoff",
-        freee_account_item_id=11, freee_account_item_name="売上高", freee_tax_code=21,
-    ))
+    db_session.add(
+        AccountItemMapping(
+            mapping_type=MappingType.SALES_CATEGORY,
+            source_key="subscription",
+            freee_account_item_id=10,
+            freee_account_item_name="売上高",
+            freee_tax_code=21,
+        )
+    )
+    db_session.add(
+        AccountItemMapping(
+            mapping_type=MappingType.SALES_CATEGORY,
+            source_key="oneoff",
+            freee_account_item_id=11,
+            freee_account_item_name="売上高",
+            freee_tax_code=21,
+        )
+    )
     db_session.commit()
     token = freee_token_store.save_token(
-        db_session, company_id=101, access_token="a", refresh_token="r", expires_in=21600
+        db_session,
+        company_id=101,
+        access_token="a",
+        refresh_token="r",
+        expires_in=21600,
     )
 
     deal_route = respx.post(f"{API_BASE}/api/1/deals").mock(
@@ -160,17 +223,29 @@ async def test_sync_sales_to_freee_idempotent(db_session):
 async def test_sync_sales_records_failure_and_continues(db_session):
     """1件失敗しても残りは同期され、失敗はFAILEDで記録される"""
     _seed_orders(db_session)
-    db_session.add(AccountItemMapping(
-        mapping_type=MappingType.SALES_CATEGORY, source_key="subscription",
-        freee_account_item_id=10, freee_account_item_name="売上高",
-    ))
-    db_session.add(AccountItemMapping(
-        mapping_type=MappingType.SALES_CATEGORY, source_key="oneoff",
-        freee_account_item_id=11, freee_account_item_name="売上高",
-    ))
+    db_session.add(
+        AccountItemMapping(
+            mapping_type=MappingType.SALES_CATEGORY,
+            source_key="subscription",
+            freee_account_item_id=10,
+            freee_account_item_name="売上高",
+        )
+    )
+    db_session.add(
+        AccountItemMapping(
+            mapping_type=MappingType.SALES_CATEGORY,
+            source_key="oneoff",
+            freee_account_item_id=11,
+            freee_account_item_name="売上高",
+        )
+    )
     db_session.commit()
     token = freee_token_store.save_token(
-        db_session, company_id=101, access_token="a", refresh_token="r", expires_in=21600
+        db_session,
+        company_id=101,
+        access_token="a",
+        refresh_token="r",
+        expires_in=21600,
     )
 
     respx.post(f"{API_BASE}/api/1/deals").mock(

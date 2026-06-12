@@ -26,7 +26,9 @@ async def _fetch_trial_pl(db: Session, year: int, month: int) -> Optional[dict]:
     """freee接続時のみ試算表（PL）を取得する。未接続・失敗時はNoneを返す"""
     try:
         client = FreeeAPIClient(db)
-        return await client.get_trial_pl(fiscal_year=year, start_month=month, end_month=month)
+        return await client.get_trial_pl(
+            fiscal_year=year, start_month=month, end_month=month
+        )
     except FreeeNotConnectedError:
         return None
     except FreeeAPIError as e:
@@ -70,13 +72,19 @@ async def get_trial_balance(
     try:
         client = FreeeAPIClient(db)
     except FreeeNotConnectedError as e:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e)
+        )
 
     try:
         if type == "bs":
-            data = await client.get_trial_bs(fiscal_year=year, start_month=month, end_month=month)
+            data = await client.get_trial_bs(
+                fiscal_year=year, start_month=month, end_month=month
+            )
         else:
-            data = await client.get_trial_pl(fiscal_year=year, start_month=month, end_month=month)
+            data = await client.get_trial_pl(
+                fiscal_year=year, start_month=month, end_month=month
+            )
     except FreeeAPIError as e:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,

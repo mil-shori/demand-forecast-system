@@ -1,25 +1,24 @@
 """
 FastAPI メインアプリケーション
 """
-from fastapi import FastAPI, Request, status
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi.responses import JSONResponse
-from fastapi.exception_handlers import request_validation_exception_handler
-from fastapi.exceptions import RequestValidationError
 import logging
 import time
 from contextlib import asynccontextmanager
 
-from app.config import settings
-from app.database import create_tables, check_database_connection
-from app.api.v1 import health, data_import, forecast, accounting
+from fastapi import FastAPI, Request, status
+from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.responses import JSONResponse
 
+from app.api.v1 import accounting, data_import, forecast, health
+from app.config import settings
+from app.database import check_database_connection, create_tables
 
 # ログ設定
 logging.basicConfig(
     level=getattr(logging, settings.log_level.upper()),
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -27,18 +26,18 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """アプリケーション起動・終了時の処理"""
-    
+
     # 起動時処理
     logger.info(f"Starting {settings.app_name} v{settings.version}")
     logger.info(f"Environment: {settings.environment}")
-    
+
     # データベース接続確認
     if await check_database_connection():
         logger.info("Database connection successful")
     else:
         logger.error("Database connection failed")
         raise Exception("Cannot connect to database")
-    
+
     # 開発環境でのみテーブル自動作成
     if settings.environment == "development":
         try:
@@ -46,9 +45,9 @@ async def lifespan(app: FastAPI):
             logger.info("Database tables created/verified")
         except Exception as e:
             logger.error(f"Failed to create database tables: {e}")
-    
+
     yield
-    
+
     # 終了時処理
     logger.info("Shutting down application")
 
@@ -76,7 +75,7 @@ app.add_middleware(
 if not settings.debug:
     app.add_middleware(
         TrustedHostMiddleware,
-        allowed_hosts=["localhost", "127.0.0.1", "*.yourdomain.com"]
+        allowed_hosts=["localhost", "127.0.0.1", "*.yourdomain.com"],
     )
 
 
@@ -92,22 +91,20 @@ async def add_process_time_header(request: Request, call_next):
 
 
 # ログミドルウェア
-@app.middleware("http") 
+@app.middleware("http")
 async def log_requests(request: Request, call_next):
     """リクエスト・レスポンスログ"""
     start_time = time.time()
-    
+
     # リクエストログ
     logger.info(f"Request: {request.method} {request.url}")
-    
+
     response = await call_next(request)
-    
+
     # レスポンスログ
     process_time = time.time() - start_time
-    logger.info(
-        f"Response: {response.status_code} - {process_time:.4f}s"
-    )
-    
+    logger.info(f"Response: {response.status_code} - {process_time:.4f}s")
+
     return response
 
 
@@ -121,8 +118,8 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         content={
             "error": "Validation Error",
             "detail": exc.errors(),
-            "message": "リクエストデータが正しくありません。入力内容を確認してください。"
-        }
+            "message": "リクエストデータが正しくありません。入力内容を確認してください。",
+        },
     )
 
 
@@ -134,8 +131,8 @@ async def internal_error_handler(request: Request, exc: Exception):
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
             "error": "Internal Server Error",
-            "message": "サーバー内部エラーが発生しました。管理者にお問い合わせください。"
-        }
+            "message": "サーバー内部エラーが発生しました。管理者にお問い合わせください。",
+        },
     )
 
 
@@ -154,7 +151,7 @@ async def root():
         "message": f"Welcome to {settings.app_name}",
         "version": settings.version,
         "environment": settings.environment,
-        "status": "running"
+        "status": "running",
     }
 
 
@@ -172,18 +169,18 @@ async def system_info():
         "forecast_settings": {
             "default_horizon": settings.forecast_default_horizon,
             "max_horizon": settings.max_forecast_horizon,
-            "batch_size": settings.forecast_batch_size
-        }
+            "batch_size": settings.forecast_batch_size,
+        },
     }
 
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",
         port=8000,
         reload=settings.debug,
-        log_level=settings.log_level.lower()
+        log_level=settings.log_level.lower(),
     )

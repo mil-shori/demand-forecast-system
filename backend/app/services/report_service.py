@@ -53,7 +53,11 @@ def collect_monthly_data(db: Session, year: int, month: int) -> Dict[str, Any]:
     )
 
     expense_by_category = (
-        db.query(Expense.category, func.sum(Expense.amount).label("amount"), func.count(Expense.id))
+        db.query(
+            Expense.category,
+            func.sum(Expense.amount).label("amount"),
+            func.count(Expense.id),
+        )
         .filter(Expense.expense_date >= start, Expense.expense_date <= end)
         .group_by(Expense.category)
         .all()
@@ -95,7 +99,14 @@ def generate_monthly_report_xlsx(
         [s["period"], s["order_type"], float(s["amount"]), s["order_count"]]
         for s in data["sales"]
     ]
-    sales_rows.append(["合計", "", float(data["total_sales"]), sum(s["order_count"] for s in data["sales"])])
+    sales_rows.append(
+        [
+            "合計",
+            "",
+            float(data["total_sales"]),
+            sum(s["order_count"] for s in data["sales"]),
+        ]
+    )
     _write_sheet(ws, ["日付", "注文タイプ", "売上金額", "注文件数"], sales_rows)
 
     # シート2: 経費一覧
@@ -114,7 +125,9 @@ def generate_monthly_report_xlsx(
     ]
     expense_rows.append(["合計", "", float(data["total_expenses"]), "", "", "", ""])
     for category, amount, count in data["expense_by_category"]:
-        expense_rows.append([f"小計: {category}", "", float(amount), f"{count}件", "", "", ""])
+        expense_rows.append(
+            [f"小計: {category}", "", float(amount), f"{count}件", "", "", ""]
+        )
     _write_sheet(
         ws,
         ["日付", "カテゴリ", "金額", "支払方法", "取引先", "摘要", "ステータス"],
@@ -137,8 +150,12 @@ def generate_monthly_report_xlsx(
 
     # シート4: 同期状況
     ws = wb.create_sheet("同期状況")
-    synced = sum(1 for j in data["journal_entries"] if j.status == JournalEntryStatus.SYNCED)
-    failed = sum(1 for j in data["journal_entries"] if j.status == JournalEntryStatus.FAILED)
+    synced = sum(
+        1 for j in data["journal_entries"] if j.status == JournalEntryStatus.SYNCED
+    )
+    failed = sum(
+        1 for j in data["journal_entries"] if j.status == JournalEntryStatus.FAILED
+    )
     sync_rows = [
         [
             j.entry_date.isoformat(),

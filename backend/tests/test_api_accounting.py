@@ -17,12 +17,17 @@ API_BASE = settings.freee_api_base_url
 
 def _connect_freee(db):
     return freee_token_store.save_token(
-        db, company_id=101, access_token="a", refresh_token="r", expires_in=21600,
+        db,
+        company_id=101,
+        access_token="a",
+        refresh_token="r",
+        expires_in=21600,
         company_name="テスト事業所",
     )
 
 
 # --- freee接続管理 ---
+
 
 def test_auth_url(client):
     response = client.get("/api/v1/accounting/freee/auth-url")
@@ -60,7 +65,11 @@ def test_status_connected(client, db_session):
 def test_select_company_and_disconnect(client, db_session):
     _connect_freee(db_session)
     freee_token_store.save_token(
-        db_session, company_id=202, access_token="a", refresh_token="r", expires_in=21600
+        db_session,
+        company_id=202,
+        access_token="a",
+        refresh_token="r",
+        expires_in=21600,
     )
 
     response = client.post("/api/v1/accounting/freee/company", json={"company_id": 202})
@@ -68,7 +77,12 @@ def test_select_company_and_disconnect(client, db_session):
     active = [c for c in response.json()["companies"] if c["is_active"]]
     assert active[0]["company_id"] == 202
 
-    assert client.post("/api/v1/accounting/freee/company", json={"company_id": 999}).status_code == 404
+    assert (
+        client.post(
+            "/api/v1/accounting/freee/company", json={"company_id": 999}
+        ).status_code
+        == 404
+    )
 
     response = client.post("/api/v1/accounting/freee/disconnect")
     assert response.status_code == 200
@@ -81,6 +95,7 @@ def test_account_items_requires_connection(client):
 
 
 # --- 勘定科目マッピング ---
+
 
 def test_mapping_crud_and_suggest(client):
     payload = {
@@ -99,46 +114,80 @@ def test_mapping_crud_and_suggest(client):
     assert client.post("/api/v1/accounting/mappings", json=payload).status_code == 409
 
     # 一覧
-    response = client.get("/api/v1/accounting/mappings", params={"mapping_type": "sales_category"})
+    response = client.get(
+        "/api/v1/accounting/mappings", params={"mapping_type": "sales_category"}
+    )
     assert len(response.json()) == 1
 
     # 推定（完全一致）
-    response = client.post("/api/v1/accounting/mappings/suggest", json={
-        "mapping_type": "sales_category", "source_key": "subscription",
-    })
+    response = client.post(
+        "/api/v1/accounting/mappings/suggest",
+        json={
+            "mapping_type": "sales_category",
+            "source_key": "subscription",
+        },
+    )
     assert response.json()["matched"] is True
     assert response.json()["mapping"]["freee_account_item_id"] == 10
 
     # 推定（キーワード一致）
-    response = client.post("/api/v1/accounting/mappings/suggest", json={
-        "mapping_type": "sales_category", "source_key": "unknown", "description": "5月分サブスク売上",
-    })
+    response = client.post(
+        "/api/v1/accounting/mappings/suggest",
+        json={
+            "mapping_type": "sales_category",
+            "source_key": "unknown",
+            "description": "5月分サブスク売上",
+        },
+    )
     assert response.json()["matched"] is True
 
     # 推定（不一致）
-    response = client.post("/api/v1/accounting/mappings/suggest", json={
-        "mapping_type": "sales_category", "source_key": "unknown", "description": "該当なし",
-    })
+    response = client.post(
+        "/api/v1/accounting/mappings/suggest",
+        json={
+            "mapping_type": "sales_category",
+            "source_key": "unknown",
+            "description": "該当なし",
+        },
+    )
     assert response.json()["matched"] is False
 
     # 更新・削除
     payload["freee_account_item_name"] = "売上高"
-    assert client.put(f"/api/v1/accounting/mappings/{mapping_id}", json=payload).status_code == 200
+    assert (
+        client.put(
+            f"/api/v1/accounting/mappings/{mapping_id}", json=payload
+        ).status_code
+        == 200
+    )
     assert client.delete(f"/api/v1/accounting/mappings/{mapping_id}").status_code == 200
     assert client.delete(f"/api/v1/accounting/mappings/{mapping_id}").status_code == 404
 
 
 # --- 売上同期 ---
 
+
 def test_sales_sync_dry_run(client, db_session):
-    db_session.add(Order(order_id="O1", user_id="U1", order_date=date(2026, 5, 1),
-                         order_type=OrderType.SUBSCRIPTION, total_amount=Decimal("5000")))
+    db_session.add(
+        Order(
+            order_id="O1",
+            user_id="U1",
+            order_date=date(2026, 5, 1),
+            order_type=OrderType.SUBSCRIPTION,
+            total_amount=Decimal("5000"),
+        )
+    )
     db_session.commit()
 
-    response = client.post("/api/v1/accounting/sales/sync", json={
-        "start_date": "2026-05-01", "end_date": "2026-05-31",
-        "granularity": "daily", "dry_run": True,
-    })
+    response = client.post(
+        "/api/v1/accounting/sales/sync",
+        json={
+            "start_date": "2026-05-01",
+            "end_date": "2026-05-31",
+            "granularity": "daily",
+            "dry_run": True,
+        },
+    )
     assert response.status_code == 200
     body = response.json()
     assert body["dry_run"] is True
@@ -148,37 +197,64 @@ def test_sales_sync_dry_run(client, db_session):
 
 
 def test_sales_sync_requires_connection_when_not_dry_run(client, db_session):
-    response = client.post("/api/v1/accounting/sales/sync", json={
-        "start_date": "2026-05-01", "end_date": "2026-05-31", "dry_run": False,
-    })
+    response = client.post(
+        "/api/v1/accounting/sales/sync",
+        json={
+            "start_date": "2026-05-01",
+            "end_date": "2026-05-31",
+            "dry_run": False,
+        },
+    )
     assert response.status_code == 503
 
 
 def test_sales_sync_rejects_invalid_date_range(client):
-    response = client.post("/api/v1/accounting/sales/sync", json={
-        "start_date": "2026-05-31", "end_date": "2026-05-01", "dry_run": True,
-    })
+    response = client.post(
+        "/api/v1/accounting/sales/sync",
+        json={
+            "start_date": "2026-05-31",
+            "end_date": "2026-05-01",
+            "dry_run": True,
+        },
+    )
     assert response.status_code == 422
 
 
 @respx.mock
 def test_sales_sync_real_run(client, db_session):
-    db_session.add(Order(order_id="O1", user_id="U1", order_date=date(2026, 5, 1),
-                         order_type=OrderType.SUBSCRIPTION, total_amount=Decimal("5000")))
+    db_session.add(
+        Order(
+            order_id="O1",
+            user_id="U1",
+            order_date=date(2026, 5, 1),
+            order_type=OrderType.SUBSCRIPTION,
+            total_amount=Decimal("5000"),
+        )
+    )
     db_session.commit()
     _connect_freee(db_session)
     client_payload = {
-        "mapping_type": "sales_category", "source_key": "subscription",
-        "freee_account_item_id": 10, "freee_account_item_name": "売上高",
+        "mapping_type": "sales_category",
+        "source_key": "subscription",
+        "freee_account_item_id": 10,
+        "freee_account_item_name": "売上高",
     }
-    assert client.post("/api/v1/accounting/mappings", json=client_payload).status_code == 201
+    assert (
+        client.post("/api/v1/accounting/mappings", json=client_payload).status_code
+        == 201
+    )
 
     respx.post(f"{API_BASE}/api/1/deals").mock(
         return_value=httpx.Response(201, json={"deal": {"id": 8888}})
     )
-    response = client.post("/api/v1/accounting/sales/sync", json={
-        "start_date": "2026-05-01", "end_date": "2026-05-31", "dry_run": False,
-    })
+    response = client.post(
+        "/api/v1/accounting/sales/sync",
+        json={
+            "start_date": "2026-05-01",
+            "end_date": "2026-05-31",
+            "dry_run": False,
+        },
+    )
     assert response.status_code == 200
     body = response.json()
     assert body["synced"] == 1
@@ -192,10 +268,14 @@ def test_sales_sync_real_run(client, db_session):
 
 # --- 経費 ---
 
+
 def test_expense_crud(client):
     payload = {
-        "expense_date": "2026-05-10", "amount": 1200, "category": "交通費",
-        "description": "客先訪問のタクシー代", "payment_method": "cash",
+        "expense_date": "2026-05-10",
+        "amount": 1200,
+        "category": "交通費",
+        "description": "客先訪問のタクシー代",
+        "payment_method": "cash",
     }
     response = client.post("/api/v1/accounting/expenses", json=payload)
     assert response.status_code == 201
@@ -203,14 +283,26 @@ def test_expense_crud(client):
     assert response.json()["status"] == "draft"
 
     # バリデーション: 金額0以下は422
-    assert client.post("/api/v1/accounting/expenses", json={**payload, "amount": 0}).status_code == 422
+    assert (
+        client.post(
+            "/api/v1/accounting/expenses", json={**payload, "amount": 0}
+        ).status_code
+        == 422
+    )
 
     # 一覧・フィルタ
     assert len(client.get("/api/v1/accounting/expenses").json()) == 1
-    assert len(client.get("/api/v1/accounting/expenses", params={"category": "会議費"}).json()) == 0
+    assert (
+        len(
+            client.get("/api/v1/accounting/expenses", params={"category": "会議費"}).json()
+        )
+        == 0
+    )
 
     # 更新
-    response = client.put(f"/api/v1/accounting/expenses/{expense_id}", json={**payload, "amount": 1500})
+    response = client.put(
+        f"/api/v1/accounting/expenses/{expense_id}", json={**payload, "amount": 1500}
+    )
     assert response.status_code == 200
     assert response.json()["amount"] == 1500.0
 
@@ -220,29 +312,48 @@ def test_expense_crud(client):
 
 
 def test_expense_synced_cannot_be_modified(client, db_session):
-    expense = Expense(expense_date=date(2026, 5, 10), amount=Decimal("1000"),
-                      category="交通費", status=ExpenseStatus.SYNCED, freee_deal_id=1)
+    expense = Expense(
+        expense_date=date(2026, 5, 10),
+        amount=Decimal("1000"),
+        category="交通費",
+        status=ExpenseStatus.SYNCED,
+        freee_deal_id=1,
+    )
     db_session.add(expense)
     db_session.commit()
 
     payload = {"expense_date": "2026-05-10", "amount": 1000, "category": "交通費"}
-    assert client.put(f"/api/v1/accounting/expenses/{expense.id}", json=payload).status_code == 409
+    assert (
+        client.put(
+            f"/api/v1/accounting/expenses/{expense.id}", json=payload
+        ).status_code
+        == 409
+    )
     assert client.delete(f"/api/v1/accounting/expenses/{expense.id}").status_code == 409
-    assert client.post(f"/api/v1/accounting/expenses/{expense.id}/sync").status_code == 409
+    assert (
+        client.post(f"/api/v1/accounting/expenses/{expense.id}/sync").status_code == 409
+    )
 
 
 @respx.mock
 def test_expense_sync(client, db_session):
     _connect_freee(db_session)
     mapping = {
-        "mapping_type": "expense_category", "source_key": "交通費",
-        "freee_account_item_id": 30, "freee_account_item_name": "旅費交通費",
+        "mapping_type": "expense_category",
+        "source_key": "交通費",
+        "freee_account_item_id": 30,
+        "freee_account_item_name": "旅費交通費",
     }
     assert client.post("/api/v1/accounting/mappings", json=mapping).status_code == 201
 
-    response = client.post("/api/v1/accounting/expenses", json={
-        "expense_date": "2026-05-10", "amount": 1200, "category": "交通費",
-    })
+    response = client.post(
+        "/api/v1/accounting/expenses",
+        json={
+            "expense_date": "2026-05-10",
+            "amount": 1200,
+            "category": "交通費",
+        },
+    )
     expense_id = response.json()["id"]
 
     respx.post(f"{API_BASE}/api/1/deals").mock(
@@ -256,30 +367,51 @@ def test_expense_sync(client, db_session):
 
 # --- レポート ---
 
+
 def test_monthly_report_xlsx_download(client, db_session):
-    db_session.add(Order(order_id="O1", user_id="U1", order_date=date(2026, 5, 1),
-                         order_type=OrderType.ONEOFF, total_amount=Decimal("3000")))
+    db_session.add(
+        Order(
+            order_id="O1",
+            user_id="U1",
+            order_date=date(2026, 5, 1),
+            order_type=OrderType.ONEOFF,
+            total_amount=Decimal("3000"),
+        )
+    )
     db_session.commit()
 
-    response = client.get("/api/v1/accounting/reports/monthly",
-                          params={"year": 2026, "month": 5, "format": "xlsx"})
+    response = client.get(
+        "/api/v1/accounting/reports/monthly",
+        params={"year": 2026, "month": 5, "format": "xlsx"},
+    )
     assert response.status_code == 200
     assert "spreadsheetml" in response.headers["content-type"]
-    assert 'monthly_report_2026-05.xlsx' in response.headers["content-disposition"]
+    assert "monthly_report_2026-05.xlsx" in response.headers["content-disposition"]
 
 
 def test_monthly_report_csv_download(client, db_session):
-    db_session.add(Order(order_id="O1", user_id="U1", order_date=date(2026, 5, 1),
-                         order_type=OrderType.ONEOFF, total_amount=Decimal("3000")))
+    db_session.add(
+        Order(
+            order_id="O1",
+            user_id="U1",
+            order_date=date(2026, 5, 1),
+            order_type=OrderType.ONEOFF,
+            total_amount=Decimal("3000"),
+        )
+    )
     db_session.commit()
 
-    response = client.get("/api/v1/accounting/reports/monthly",
-                          params={"year": 2026, "month": 5, "format": "csv"})
+    response = client.get(
+        "/api/v1/accounting/reports/monthly",
+        params={"year": 2026, "month": 5, "format": "csv"},
+    )
     assert response.status_code == 200
     assert "3000" in response.text
 
 
 def test_trial_balance_requires_connection(client):
-    response = client.get("/api/v1/accounting/reports/trial-balance",
-                          params={"year": 2026, "month": 5, "type": "pl"})
+    response = client.get(
+        "/api/v1/accounting/reports/trial-balance",
+        params={"year": 2026, "month": 5, "type": "pl"},
+    )
     assert response.status_code == 503

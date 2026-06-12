@@ -6,7 +6,6 @@ freee_client のテスト（respxでHTTPモック）
 - refreshローテーション後の即時保存
 - 401→リフレッシュ→リトライ、429→Retry-After待機リトライ
 """
-from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qs, urlparse
 
 import httpx
@@ -84,7 +83,9 @@ async def test_exchange_code():
 @pytest.mark.asyncio
 @respx.mock
 async def test_exchange_code_error_raises():
-    respx.post(TOKEN_URL).mock(return_value=httpx.Response(401, json={"error": "invalid_grant"}))
+    respx.post(TOKEN_URL).mock(
+        return_value=httpx.Response(401, json={"error": "invalid_grant"})
+    )
     oauth = FreeeOAuthClient()
     with pytest.raises(FreeeAPIError):
         await oauth.exchange_code("bad-code")
@@ -101,10 +102,14 @@ async def test_request_refreshes_expiring_token_and_saves_rotated_refresh(db_ses
     # 期限切れ間近のトークンで接続
     token = _connect(db_session, expires_in=60)
     respx.post(TOKEN_URL).mock(
-        return_value=httpx.Response(200, json=_token_response("rotated-access", "rotated-refresh"))
+        return_value=httpx.Response(
+            200, json=_token_response("rotated-access", "rotated-refresh")
+        )
     )
     respx.get(f"{API_BASE}/api/1/account_items").mock(
-        return_value=httpx.Response(200, json={"account_items": [{"id": 1, "name": "売上高"}]})
+        return_value=httpx.Response(
+            200, json={"account_items": [{"id": 1, "name": "売上高"}]}
+        )
     )
 
     client = FreeeAPIClient(db_session, token)
@@ -122,12 +127,16 @@ async def test_request_refreshes_expiring_token_and_saves_rotated_refresh(db_ses
 async def test_request_retries_once_on_401(db_session):
     token = _connect(db_session)
     respx.post(TOKEN_URL).mock(
-        return_value=httpx.Response(200, json=_token_response("after-401-access", "after-401-refresh"))
+        return_value=httpx.Response(
+            200, json=_token_response("after-401-access", "after-401-refresh")
+        )
     )
     api_route = respx.get(f"{API_BASE}/api/1/companies").mock(
         side_effect=[
             httpx.Response(401, json={"message": "expired"}),
-            httpx.Response(200, json={"companies": [{"id": 101, "display_name": "テスト"}]}),
+            httpx.Response(
+                200, json={"companies": [{"id": 101, "display_name": "テスト"}]}
+            ),
         ]
     )
 
@@ -165,7 +174,9 @@ async def test_request_raises_on_api_error(db_session):
     )
     client = FreeeAPIClient(db_session, token)
     with pytest.raises(FreeeAPIError) as exc_info:
-        await client.create_deal({"issue_date": "2026-05-01", "type": "income", "details": []})
+        await client.create_deal(
+            {"issue_date": "2026-05-01", "type": "income", "details": []}
+        )
     assert exc_info.value.status_code == 400
 
 
@@ -177,7 +188,9 @@ async def test_create_deal_includes_company_id(db_session):
         return_value=httpx.Response(201, json={"deal": {"id": 999}})
     )
     client = FreeeAPIClient(db_session, token)
-    deal = await client.create_deal({"issue_date": "2026-05-01", "type": "income", "details": []})
+    deal = await client.create_deal(
+        {"issue_date": "2026-05-01", "type": "income", "details": []}
+    )
     assert deal["id"] == 999
     import json
 
