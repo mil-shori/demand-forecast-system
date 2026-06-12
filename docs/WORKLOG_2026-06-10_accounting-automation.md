@@ -161,8 +161,28 @@ docker compose exec backend pytest tests -v   # テスト実行
 
 ## 7. 残課題・今後の拡張候補
 
-- [ ] mainへのPR作成・レビュー・マージ（未実施。必要時に作成）
+- [x] mainへのPR作成（2026-06-12 実施）
 - [ ] freee経費精算API（申請フロー型）対応 — 現状は支出deal方式
 - [ ] 勘定科目マッピングの管理UI（現状はAPIのみ。CRUDは `/api/v1/accounting/mappings`）
 - [ ] 経費フォームのAI推定結果をマッピングとしてワンクリック保存する機能
-- [ ] CIワークフローへの `pytest` / `tsc` 組み込み
+- [x] CIワークフローへの `pytest` / `tsc` 組み込み（既存CIにあり。下記の通りCIが通る状態に修復）
+
+---
+
+## 8. 追記（2026-06-12）: CIグリーン化とPR作成
+
+引き継ぎセッションでCI（.github/workflows/ci.yml）が通らない要因を全て解消した。
+
+### 修正内容
+
+| コミット | 内容 |
+|---|---|
+| `style:` setup.cfg追加 | flake8/isortに設定がなくblackと競合（行長79 vs 88）。設定を追加しbackend全体にblack/isortを適用、未使用import除去・E501/E712/E722解消 |
+| `fix:` ESLint設定修正 | `.eslintrc.cjs` の `@typescript-eslint/recommended` は `plugin:` プレフィックス必須（初期コミット由来でlintが常に失敗）。あわせて `error: any` を `getApiErrorMessage` ヘルパーに置換 |
+| `test:` jest整備 | jest設定が存在せず `npm test` が "No tests found" でexit 1。jest.config.cjs（ts-jest）と `getApiErrorMessage` の単体テスト5件を追加 |
+| `fix:` pytest-cov追加 | CIは `pytest --cov=app` を実行するが pytest-cov 未導入で失敗していた |
+
+### 検証結果（ローカル、CI同等コマンド）
+
+- backend: `black --check` / `isort --check-only` / `flake8` / `pytest --cov=app` → **59件全パス**
+- frontend: `npm run lint`（--max-warnings 0）/ `npm run type-check` / `npm test` / `npm run build` → 全て成功
