@@ -8,6 +8,7 @@ import {
   fetchFreeeStatus,
   fetchAiStatus,
   fetchMonthlySummary,
+  getApiErrorMessage,
 } from '../../api/accounting'
 
 const MonthlyReportPanel: React.FC = () => {
@@ -28,8 +29,8 @@ const MonthlyReportPanel: React.FC = () => {
 
   const summaryMutation = useMutation({
     mutationFn: () => fetchMonthlySummary(year, month),
-    onError: (error: any) => {
-      toast.error(error?.response?.data?.detail ?? 'AIサマリーの生成に失敗しました')
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, 'AIサマリーの生成に失敗しました'))
     },
   })
 

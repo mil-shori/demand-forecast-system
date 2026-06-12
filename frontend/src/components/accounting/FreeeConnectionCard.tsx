@@ -7,6 +7,7 @@ import {
   fetchFreeeAuthUrl,
   selectFreeeCompany,
   disconnectFreee,
+  getApiErrorMessage,
 } from '../../api/accounting'
 
 const FreeeConnectionCard: React.FC = () => {
@@ -23,8 +24,8 @@ const FreeeConnectionCard: React.FC = () => {
       // freeeの認可画面へ遷移（コールバック後にこの画面へ戻ってくる）
       window.location.href = authUrl
     },
-    onError: (error: any) => {
-      toast.error(error?.response?.data?.detail ?? 'freee接続の開始に失敗しました')
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, 'freee接続の開始に失敗しました'))
     },
   })
 
@@ -47,6 +48,7 @@ const FreeeConnectionCard: React.FC = () => {
   })
 
   const handleDisconnect = () => {
+    // eslint-disable-next-line no-alert -- 破壊的操作（接続解除）の確認に意図的に使用
     if (window.confirm('freee接続を解除します。保存済みのトークンが削除されますがよろしいですか？')) {
       disconnectMutation.mutate()
     }

@@ -7,6 +7,7 @@ import {
   fetchJournalEntries,
   retryJournalEntry,
   SalesSyncResult,
+  getApiErrorMessage,
 } from '../../api/accounting'
 
 const statusBadge: Record<string, string> = {
@@ -49,8 +50,8 @@ const SalesSyncPanel: React.FC = () => {
         queryClient.invalidateQueries({ queryKey: ['journalEntries'] })
       }
     },
-    onError: (error: any) => {
-      toast.error(error?.response?.data?.detail ?? '売上同期に失敗しました')
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, '売上同期に失敗しました'))
     },
   })
 
@@ -60,8 +61,8 @@ const SalesSyncPanel: React.FC = () => {
       toast.success('再送に成功しました')
       queryClient.invalidateQueries({ queryKey: ['journalEntries'] })
     },
-    onError: (error: any) => {
-      toast.error(error?.response?.data?.detail ?? '再送に失敗しました')
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, '再送に失敗しました'))
     },
   })
 

@@ -10,6 +10,7 @@ import {
   fetchAiStatus,
   suggestAccountItem,
   ExpenseInput,
+  getApiErrorMessage,
 } from '../../api/accounting'
 
 const statusBadge: Record<string, string> = {
@@ -55,8 +56,8 @@ const ExpensePanel: React.FC = () => {
         description: form.description ?? '',
         transaction_type: 'expense',
       }),
-    onError: (error: any) => {
-      toast.error(error?.response?.data?.detail ?? 'AI推定に失敗しました')
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, 'AI推定に失敗しました'))
     },
   })
 
@@ -72,8 +73,8 @@ const ExpensePanel: React.FC = () => {
       setForm(emptyForm)
       invalidate()
     },
-    onError: (error: any) => {
-      toast.error(error?.response?.data?.detail ?? '経費の登録に失敗しました')
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, '経費の登録に失敗しました'))
     },
   })
 
@@ -83,8 +84,8 @@ const ExpensePanel: React.FC = () => {
       toast.success('経費を削除しました')
       invalidate()
     },
-    onError: (error: any) => {
-      toast.error(error?.response?.data?.detail ?? '削除に失敗しました')
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, '削除に失敗しました'))
     },
   })
 
@@ -94,8 +95,8 @@ const ExpensePanel: React.FC = () => {
       toast.success('freeeに登録しました')
       invalidate()
     },
-    onError: (error: any) => {
-      toast.error(error?.response?.data?.detail ?? 'freee同期に失敗しました')
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, 'freee同期に失敗しました'))
     },
   })
 
@@ -109,6 +110,7 @@ const ExpensePanel: React.FC = () => {
   }
 
   const handleDelete = (id: number) => {
+    // eslint-disable-next-line no-alert -- 破壊的操作（削除）の確認に意図的に使用
     if (window.confirm('この経費を削除しますか？')) {
       deleteMutation.mutate(id)
     }
