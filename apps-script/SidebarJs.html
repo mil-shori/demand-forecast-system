@@ -1,0 +1,196 @@
+<script>
+  // --- タブ切り替え ---
+  document.querySelectorAll('.tab').forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      document.querySelectorAll('.tab').forEach(function (t) { t.classList.remove('active'); });
+      document.querySelectorAll('.panel').forEach(function (p) { p.classList.add('hidden'); });
+      tab.classList.add('active');
+      document.getElementById('tab-' + tab.dataset.tab).classList.remove('hidden');
+    });
+  });
+
+  function banner(msg, kind) {
+    var el = document.getElementById('banner');
+    el.textContent = msg;
+    el.className = 'banner ' + (kind || 'info');
+  }
+  function clearBanner() { document.getElementById('banner').className = 'banner hidden'; }
+  function yen(n) { return '¥' + Math.round(Number(n)).toLocaleString(); }
+
+  var appStatus = null;
+
+  // --- 初期ロード ---
+  function loadStatus() {
+    google.script.run.withSuccessHandler(function (status) {
+      appStatus = status;
+      renderConnection(status.freee);
+      // AIボタンの表示
+      document.getElementById('ai-suggest-btn').classList.toggle('hidden', !status.ai.configured);
+      document.getElementById('ai-summary-btn').classList.toggle('hidden', !status.ai.configured);
+    }).withFailureHandler(function (e) { banner(e.message, 'err'); }).getAppStatus();
+  }
+
+  function renderConnection(freee) {
+    var statusEl = document.getElementById('conn-status');
+    var actionsEl = document.getElementById('conn-actions');
+    if (!freee.configured) {
+      statusEl.innerHTML = '<span class="status-failed">未設定</span>: ' + freee.message;
+      actionsEl.innerHTML = '<p class="muted small">スクリプト プロパティに FREEE_CLIENT_ID / FREEE_CLIENT_SECRET を登録してください。</p>';
+      return;
+    }
+    if (freee.connected) {
+      statusEl.innerHTML = '<span class="status-synced">接続済み</span>' +
+        (freee.companyName ? '<br>事業所: ' + freee.companyName : '');
+      actionsEl.innerHTML =
+        '<button class="btn-secondary" onclick="loadCompanies()">事業所を選択/変更</button>' +
+        '<button class="btn-secondary" onclick="disconnect()">接続解除</button>' +
+        '<div id="company-list"></div>';
+    } else {
+      statusEl.innerHTML = '<span class="status-pending">未接続</span>';
+      actionsEl.innerHTML = '<button class="btn-primary" onclick="connect()">freeeに接続</button>' +
+        '<p class="muted small">コールバックURL（freee開発者アプリに登録）:<br><code style="word-break:break-all">' +
+        (freee.redirectUri || '') + '</code></p>';
+    }
+  }
+
+  function connect() {
+    banner('認可URLを取得中...', 'info');
+    google.script.run.withSuccessHandler(function (info) {
+      clearBanner();
+      window.open(info.authorizationUrl, '_blank');
+      banner('別タブでfreeeにログイン・許可してください。完了後この画面で「再読込」してください。', 'info');
+      var actionsEl = document.getElementById('conn-actions');
+      actionsEl.innerHTML += '<button class="btn-primary" onclick="loadStatus()">再読込</button>';
+    }).withFailureHandler(function (e) { banner(e.message, 'err'); }).getAuthUrl();
+  }
+
+  function disconnect() {
+    google.script.run.withSuccessHandler(function () { banner('接続を解除しました', 'ok'); loadStatus(); })
+      .withFailureHandler(function (e) { banner(e.message, 'err'); }).disconnectFreee();
+  }
+
+  function loadCompanies() {
+    banner('事業所を取得中...', 'info');
+    google.script.run.withSuccessHandler(function (companies) {
+      clearBanner();
+      var html = '<label>事業所<select id="company-select">' +
+        companies.map(function (c) { return '<option value="' + c.id + '">' + c.name + '</option>'; }).join('') +
+        '</select></label><button class="btn-primary" onclick="chooseCompany()">この事業所を使う</button>';
+      document.getElementById('company-list').innerHTML = html;
+    }).withFailureHandler(function (e) { banner(e.message, 'err'); }).listCompanies();
+  }
+
+  function chooseCompany() {
+    var sel = document.getElementById('company-select');
+    google.script.run.withSuccessHandler(function () { banner('事業所を設定しました', 'ok'); loadStatus(); })
+      .withFailureHandler(function (e) { banner(e.message, 'err'); })
+      .setCompany(sel.value, sel.options[sel.selectedIndex].text);
+  }
+
+  function initSheets() {
+    google.script.run.withSuccessHandler(function () { banner('シートを初期化しました', 'ok'); })
+      .withFailureHandler(function (e) { banner(e.message, 'err'); }).initializeSheets();
+  }
+  function seedData() {
+    google.script.run.withSuccessHandler(function () { banner('サンプルデータを投入しました', 'ok'); })
+      .withFailureHandler(function (e) { banner(e.message, 'err'); }).seedSampleData();
+  }
+
+  // --- 売上同期 ---
+  function runSync(dryRun) {
+    var start = document.getElementById('sales-start').value;
+    var end = document.getElementById('sales-end').value;
+    var gran = document.getElementById('sales-granularity').value;
+    document.getElementById('sales-result').innerHTML = '<p class="muted">処理中...</p>';
+    banner(dryRun ? 'プレビューを生成中...' : 'freeeに同期中...', 'info');
+    google.script.run.withSuccessHandler(function (res) {
+      clearBanner();
+      renderSyncResult(res);
+    }).withFailureHandler(function (e) {
+      document.getElementById('sales-result').innerHTML = '';
+      banner(e.message, 'err');
+    }).syncSalesToFreee(start, end, gran, dryRun);
+  }
+
+  function renderSyncResult(res) {
+    var html = '<p>' + (res.dry_run ? 'プレビュー' : '同期完了') + ': 合計' + res.total + '件';
+    if (!res.dry_run) html += '（登録' + res.synced + ' / スキップ' + res.skipped + ' / 失敗' + res.failed + '）';
+    html += '</p><table><tr><th>対象</th><th>金額</th><th>勘定科目</th><th>状態</th></tr>';
+    res.results.forEach(function (r) {
+      html += '<tr><td>' + r.source_key + '</td><td>' + yen(r.amount) + '</td><td>' +
+        (r.account_item_name || '') + '</td><td class="status-' + r.status + '">' + r.status +
+        (r.error ? '<br><span class="small">' + r.error + '</span>' : '') + '</td></tr>';
+    });
+    html += '</table>';
+    document.getElementById('sales-result').innerHTML = html;
+  }
+
+  // --- 経費 ---
+  function addExpenseRow() {
+    var exp = {
+      expense_date: document.getElementById('exp-date').value,
+      amount: document.getElementById('exp-amount').value,
+      category: document.getElementById('exp-category').value,
+      description: document.getElementById('exp-desc').value,
+      payment_method: document.getElementById('exp-method').value,
+    };
+    if (!exp.amount || !exp.category) { banner('金額とカテゴリを入力してください', 'err'); return; }
+    google.script.run.withSuccessHandler(function (r) { banner('経費を追加しました（id=' + r.id + '）', 'ok'); })
+      .withFailureHandler(function (e) { banner(e.message, 'err'); }).addExpense(exp);
+  }
+
+  function suggestAccount() {
+    var category = document.getElementById('exp-category').value;
+    var desc = document.getElementById('exp-desc').value;
+    if (!category) { banner('カテゴリを入力してください', 'err'); return; }
+    document.getElementById('ai-suggest-result').innerHTML = '<p class="muted">AI推定中...</p>';
+    google.script.run.withSuccessHandler(function (items) {
+      google.script.run.withSuccessHandler(function (s) {
+        document.getElementById('ai-suggest-result').innerHTML =
+          '<div class="ai-box"><b>AI推定: ' + s.account_item_name + '</b>（確信度 ' +
+          Math.round(s.confidence * 100) + '%）<br>' + s.reason + '</div>';
+      }).withFailureHandler(function (e) {
+        document.getElementById('ai-suggest-result').innerHTML = '';
+        banner(e.message, 'err');
+      }).aiSuggestAccountItem(items, desc, category, 'expense');
+    }).withFailureHandler(function (e) {
+      document.getElementById('ai-suggest-result').innerHTML = '';
+      banner(e.message, 'err');
+    }).freeeGetAccountItems();
+  }
+
+  function syncExpenses() {
+    document.getElementById('expense-result').innerHTML = '<p class="muted">同期中...</p>';
+    google.script.run.withSuccessHandler(function (res) {
+      var html = '<p>同期完了: ' + res.total + '件（登録' + res.synced + ' / 失敗' + res.failed + '）</p>';
+      document.getElementById('expense-result').innerHTML = html;
+    }).withFailureHandler(function (e) {
+      document.getElementById('expense-result').innerHTML = '';
+      banner(e.message, 'err');
+    }).syncExpensesToFreee(null);
+  }
+
+  // --- レポート ---
+  function buildReport() {
+    var y = Number(document.getElementById('rep-year').value);
+    var m = Number(document.getElementById('rep-month').value);
+    banner('レポートシートを生成中...', 'info');
+    google.script.run.withSuccessHandler(function (r) {
+      banner('「' + r.sheetName + '」を生成しました（売上 ' + yen(r.totalSales) + ' / 経費 ' + yen(r.totalExpenses) + '）', 'ok');
+    }).withFailureHandler(function (e) { banner(e.message, 'err'); }).buildMonthlyReportSheet(y, m);
+  }
+
+  function aiSummary() {
+    var y = Number(document.getElementById('rep-year').value);
+    var m = Number(document.getElementById('rep-month').value);
+    document.getElementById('report-result').innerHTML = '<p class="muted">AIが分析中...</p>';
+    google.script.run.withSuccessHandler(function (r) {
+      document.getElementById('report-result').innerHTML = '<div class="summary-box">' + r.summary + '</div>';
+    }).withFailureHandler(function (e) {
+      document.getElementById('report-result').innerHTML = '';
+      banner(e.message, 'err');
+    }).generateMonthlySummary(y, m);
+  }
+
+  loadStatus();
+</script>
