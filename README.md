@@ -44,6 +44,14 @@ demand-forecast-system/
 3. freee開発者アプリのコールバックURLに `https://script.google.com/macros/d/{SCRIPT_ID}/usercallback` を登録
 4. スプレッドシートのメニュー「💴 経理アシスタント → サイドバーを開く」から操作
 
+### 拡張機能（アドオン）としてインストールする
+
+1つのシートに貼り付けるのではなく、**どのスプレッドシートでも使えるエディタアドオン**として
+インストールできます（HtmlServiceサイドバーのままコード変更不要）。スタンドアロンスクリプトにして
+`デプロイ → テストデプロイ → エディタ アドオン → インストール`（自分用・審査不要）、または
+Google Workspace Marketplace SDK で組織内/一般公開できます。詳細は
+[`apps-script/README.md`](apps-script/README.md#拡張機能アドオンとしてインストールする) を参照してください。
+
 ## 注意
 
 - シークレット（Client Secret / APIキー）はスクリプト プロパティに保存し、リポジトリにはコミットしません。

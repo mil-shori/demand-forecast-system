@@ -70,9 +70,21 @@ CI（`.github/workflows/ci.yml`）は、削除した backend/frontend のテス�
 
 詳細は `apps-script/README.md` を参照。
 
+## 追記（2026-06-16）: 拡張機能（エディタアドオン）としてインストール可能に
+
+「拡張機能としてインストールできるか」という要望に対応。現状の `onOpen`/`onInstall` +
+HtmlService サイドバー構成はエディタアドオンとしてそのまま配布できるため、以下を実施:
+
+- `appsscript.json` をエディタアドオン向けに整理（GWA向けの `addOns` ブロックと未使用の
+  `userinfo.email` スコープを削除。スコープは `spreadsheets.currentonly` /
+  `script.container.ui` / `script.external_request` の最小構成）
+- `apps-script/README.md` に「拡張機能（アドオン）としてインストールする」手順を追加
+  - スタンドアロン化（clasp）→ テストデプロイで自分用インストール（審査不要）
+  - Google Workspace Marketplace SDK で組織内（限定公開・審査不要）/ 一般公開（OAuth検証要）
+- トップ README にも導線を追記
+
 ## 残課題
 
 - [ ] 実際の Apps Script プロジェクトへのデプロイと、実freeeアカウントでのE2E動作確認
-- [ ] Workspace Add-on としての公開（現状は container-bound / clasp 配布想定）
+- [ ] 一般公開する場合の OAuth 検証（セキュリティ審査）対応
 - [ ] GAS用のテスト（GAS単体テストは難しいため、ロジックを純関数化して clasp 外で検証する余地）
-- [ ] mainへのPR作成（未実施）
