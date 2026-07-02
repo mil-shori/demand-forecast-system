@@ -1,123 +1,58 @@
-# 需要予測システム (Demand Forecast System)
+# freee経理アシスタント（Google スプレッドシート アドオン）
 
-定期便（中身変更可能）と単発セット購入を同時に扱う需要予測システムです。
+Google スプレッドシート上で動く経理業務自動化アドオンです。スプレッドシートの売上・経費データを
+集計して freee会計API に取引として登録し、月次レポートの生成や、Claude API による勘定科目の
+AI推定・月次サマリー生成を行います。
 
-## システム概要
+> このリポジトリは当初 FastAPI + React のローカルWebアプリ（需要予測システムの経理モジュール）
+> として開発していましたが、**Google スプレッドシートのアドオンとして全面的に作り直しました**。
+> 旧ローカルアプリの実装は Git 履歴に残っています。
 
-- **対象規模**: 月間注文数〜10万件、SKU数〜1000、同時利用者〜10名
-- **予測手法**: StatsForecast (AutoARIMA/AutoETS/Croston)
-- **アーキテクチャ**: Python/FastAPI + React + PostgreSQL
+## 主な機能
 
-## プロジェクト構造
+- **freee連携（OAuth2）**: スプレッドシートのサイドバーから freee に接続・事業所選択・切断
+- **売上の自動仕訳**: `売上データ` シートを期間×注文タイプで集計し、freee に収入取引として一括登録
+  （`仕訳ログ` シートで冪等性を担保し、再実行しても二重登録しない。dry-runプレビュー対応）
+- **経費管理**: 経費の登録と freee への支出取引同期
+- **月次レポート**: 売上・経費・同期状況を集計したレポートシートを生成
+- **AI機能（Claude API）**: 勘定科目のAI推定（幻覚対策付き）、月次サマリーの自動生成
+
+勘定科目は「マッピングシート → AI推定 → デフォルト科目」の順で決定します。
+
+## 構成
 
 ```
-demand-forecast/
-├── backend/                # Python/FastAPI バックエンド
-│   ├── app/               # アプリケーションコード
-│   ├── alembic/           # DBマイグレーション
-│   ├── tests/             # テストコード
-│   └── requirements.txt   # Python依存関係
-├── frontend/              # React フロントエンド
-│   ├── src/               # ソースコード
-│   ├── public/            # 静的ファイル
-│   └── package.json       # Node.js依存関係
-├── data/                  # サンプルデータ・CSV
-├── docs/                  # ドキュメント
-├── infrastructure/        # AWS CloudFormation/CDK
-├── scripts/               # 運用スクリプト
-└── docker-compose.yml     # 開発環境
+demand-forecast-system/
+├── apps-script/                  # Google Apps Script アドオン本体
+│   ├── appsscript.json           # マニフェスト
+│   ├── Code.gs / Auth.gs / FreeeClient.gs / Accounting.gs
+│   ├── AiService.gs / Reports.gs / Setup.gs
+│   ├── Sidebar.html / SidebarCss.html / SidebarJs.html
+│   ├── .clasp.json.example
+│   └── README.md                 # セットアップ・デモ手順（詳細）
+├── docs/                         # 作業ログ
+└── .github/workflows/ci.yml      # マニフェスト/構文チェック
 ```
 
-## クイックスタート
+## セットアップとデモの動かし方
 
-### 開発環境セットアップ
+詳細な手順は **[`apps-script/README.md`](apps-script/README.md)** を参照してください。概要:
 
-```bash
-# リポジトリクローン
-git clone <repository-url>
-cd demand-forecast
+1. Google スプレッドシートを作成し、`拡張機能 → Apps Script` で `apps-script/` の各ファイルを取り込む
+   （または `clasp push`）
+2. スクリプト プロパティに `FREEE_CLIENT_ID` / `FREEE_CLIENT_SECRET` /（任意）`ANTHROPIC_API_KEY` を登録
+3. freee開発者アプリのコールバックURLに `https://script.google.com/macros/d/{SCRIPT_ID}/usercallback` を登録
+4. スプレッドシートのメニュー「💴 経理アシスタント → サイドバーを開く」から操作
 
-# Docker Compose で開発環境起動
-docker-compose up -d
+### 拡張機能（アドオン）としてインストールする
 
-# バックエンド開発サーバー起動
-cd backend
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload
+1つのシートに貼り付けるのではなく、**どのスプレッドシートでも使えるエディタアドオン**として
+インストールできます（HtmlServiceサイドバーのままコード変更不要）。スタンドアロンスクリプトにして
+`デプロイ → テストデプロイ → エディタ アドオン → インストール`（自分用・審査不要）、または
+Google Workspace Marketplace SDK で組織内/一般公開できます。詳細は
+[`apps-script/README.md`](apps-script/README.md#拡張機能アドオンとしてインストールする) を参照してください。
 
-# フロントエンド開発サーバー起動
-cd frontend
-npm install
-npm start
-```
+## 注意
 
-### 主要機能
-
-1. **データ管理**
-   - Excel/CSV ファイル取り込み
-   - データ品質チェック・検証
-   - データ前処理・クレンジング
-
-2. **需要予測**
-   - SKU別需要予測（日次・週次）
-   - 定期便ミックス予測
-   - 季節性・トレンド分析
-
-3. **発注提案**
-   - サービスレベル別推奨発注量
-   - 在庫シミュレーション
-   - MOQ・リードタイム考慮
-
-4. **監視・分析**
-   - 予測精度監視
-   - ビジネス指標ダッシュボード
-   - アラート・通知
-
-## 技術スタック
-
-### バックエンド
-- **Python 3.11**
-- **FastAPI** - REST API フレームワーク
-- **SQLAlchemy** - ORM
-- **PostgreSQL** - データベース
-- **StatsForecast** - 時系列予測
-- **Pandas/Polars** - データ処理
-
-### フロントエンド
-- **React 18** + **TypeScript**
-- **Tailwind CSS** - スタイリング
-- **Chart.js** - グラフ表示
-- **React Query** - API状態管理
-
-### インフラストラクチャ
-- **AWS EC2** (t3.small) - アプリケーションサーバー
-- **AWS RDS** (PostgreSQL) - データベース
-- **AWS S3** - ファイルストレージ
-- **AWS CloudWatch** - 監視・ログ
-
-## 開発・運用
-
-### 開発フロー
-1. 機能ブランチ作成
-2. 開発・テスト実装
-3. プルリクエスト作成
-4. レビュー・承認
-5. メインブランチマージ
-6. CI/CDによる自動デプロイ
-
-### 運用監視
-- **ヘルスチェック**: `/health` エンドポイント
-- **メトリクス**: CloudWatch メトリクス
-- **ログ**: 構造化ログ (JSON形式)
-- **アラート**: Slack通知
-
-## ライセンス
-
-MIT License
-
-## サポート
-
-- **技術的な問い合わせ**: [技術サポート連絡先]
-- **運用に関する問い合わせ**: [運用サポート連絡先]
+- シークレット（Client Secret / APIキー）はスクリプト プロパティに保存し、リポジトリにはコミットしません。
+- freeeへの登録は本番事業所に直接反映されます。デモは検証用事業所で行ってください。

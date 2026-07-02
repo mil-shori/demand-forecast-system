@@ -3,6 +3,11 @@
 .AppleDouble
 .LSOverride
 
+# clasp / Apps Script (local)
+node_modules/
+apps-script/.clasp.json
+.clasprc.json
+
 # Windows
 Thumbs.db
 ehthumbs.db

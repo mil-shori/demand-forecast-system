@@ -1,0 +1,17 @@
+{
+  "name": "freee-accounting-addon",
+  "version": "1.0.0",
+  "private": true,
+  "description": "freee経理アシスタント — Google スプレッドシート エディタアドオン",
+  "scripts": {
+    "login": "clasp login",
+    "create": "clasp create --type standalone --title \"freee経理アシスタント\" --rootDir .",
+    "push": "clasp push",
+    "open": "clasp open",
+    "deploy": "clasp deploy --description \"editor add-on\"",
+    "versions": "clasp versions"
+  },
+  "devDependencies": {
+    "@google/clasp": "^2.4.2"
+  }
+}

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top" />
+    <meta charset="utf-8" />
+    <?!= include('SidebarCss'); ?>
+  </head>
+  <body>
+    <h1>💴 freee経理アシスタント</h1>
+
+    <div id="banner" class="banner hidden"></div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="connect">接続</button>
+      <button class="tab" data-tab="sales">売上同期</button>
+      <button class="tab" data-tab="expense">経費</button>
+      <button class="tab" data-tab="report">レポート</button>
+    </div>
+
+    <!-- 接続 -->
+    <section id="tab-connect" class="panel">
+      <div id="conn-status" class="muted">読み込み中...</div>
+      <div id="conn-actions"></div>
+      <hr />
+      <p class="muted small">データシートが未作成の場合は下のボタンで初期化できます。</p>
+      <button class="btn-secondary" onclick="initSheets()">シートを初期化</button>
+      <button class="btn-secondary" onclick="seedData()">サンプル投入</button>
+    </section>
+
+    <!-- 売上同期 -->
+    <section id="tab-sales" class="panel hidden">
+      <label>開始日<input type="date" id="sales-start" value="2026-05-01" /></label>
+      <label>終了日<input type="date" id="sales-end" value="2026-05-31" /></label>
+      <label>集計単位
+        <select id="sales-granularity">
+          <option value="daily">日次</option>
+          <option value="monthly">月次</option>
+        </select>
+      </label>
+      <button class="btn-secondary" onclick="runSync(true)">プレビュー（dry run）</button>
+      <button class="btn-primary" onclick="runSync(false)">freeeに同期</button>
+      <div id="sales-result"></div>
+    </section>
+
+    <!-- 経費 -->
+    <section id="tab-expense" class="panel hidden">
+      <label>日付<input type="date" id="exp-date" value="2026-05-10" /></label>
+      <label>金額<input type="number" id="exp-amount" placeholder="1200" /></label>
+      <label>カテゴリ<input type="text" id="exp-category" placeholder="交通費" /></label>
+      <label>摘要<input type="text" id="exp-desc" placeholder="客先訪問のタクシー代" /></label>
+      <label>支払方法
+        <select id="exp-method">
+          <option value="cash">現金</option>
+          <option value="credit_card">クレジットカード</option>
+          <option value="bank_transfer">銀行振込</option>
+        </select>
+      </label>
+      <button class="btn-secondary" onclick="addExpenseRow()">経費を追加</button>
+      <button id="ai-suggest-btn" class="btn-ai hidden" onclick="suggestAccount()">✨ AIで勘定科目を推定</button>
+      <div id="ai-suggest-result"></div>
+      <hr />
+      <button class="btn-primary" onclick="syncExpenses()">未同期の経費をfreeeに同期</button>
+      <div id="expense-result"></div>
+    </section>
+
+    <!-- レポート -->
+    <section id="tab-report" class="panel hidden">
+      <label>年<input type="number" id="rep-year" value="2026" /></label>
+      <label>月<input type="number" id="rep-month" value="5" min="1" max="12" /></label>
+      <button class="btn-primary" onclick="buildReport()">月次レポートシートを生成</button>
+      <button id="ai-summary-btn" class="btn-ai hidden" onclick="aiSummary()">✨ AIサマリーを生成</button>
+      <div id="report-result"></div>
+    </section>
+
+    <?!= include('SidebarJs'); ?>
+  </body>
+</html>

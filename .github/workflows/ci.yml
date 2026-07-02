@@ -1,220 +1,32 @@
-name: CI/CD Pipeline
+name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main ]
-
-env:
-  PYTHON_VERSION: 3.11
-  NODE_VERSION: 18
+    branches: [main]
 
 jobs:
-  # バックエンドのテストとリント
-  backend-test:
-    name: Backend Tests
+  validate-addon:
+    name: Validate Apps Script add-on
     runs-on: ubuntu-latest
-    
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: demand_forecast_test
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-        
-    - name: Cache pip dependencies
-      uses: actions/cache@v3
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
-    
-    - name: Install dependencies
-      working-directory: ./backend
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        
-    - name: Run linting
-      working-directory: ./backend
-      run: |
-        black --check --diff .
-        isort --check-only --diff .
-        flake8 .
-        
-    - name: Run type checking
-      working-directory: ./backend
-      run: |
-        # mypy app --ignore-missing-imports
-        echo "Type checking placeholder"
-        
-    - name: Run tests
-      working-directory: ./backend
-      env:
-        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/demand_forecast_test
-        SECRET_KEY: test-secret-key-12345678901234567890
-      run: |
-        pytest tests/ -v --cov=app --cov-report=xml --cov-report=html
-        
-    - name: Upload coverage reports
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./backend/coverage.xml
-        flags: backend
+      - uses: actions/checkout@v4
 
-  # フロントエンドのテストとリント
-  frontend-test:
-    name: Frontend Tests
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ env.NODE_VERSION }}
-        cache: 'npm'
-        cache-dependency-path: frontend/package-lock.json
-        
-    - name: Install dependencies
-      working-directory: ./frontend
-      run: npm ci
-      
-    - name: Run linting
-      working-directory: ./frontend
-      run: |
-        npm run lint
-        
-    - name: Run type checking
-      working-directory: ./frontend
-      run: |
-        npm run type-check
-        
-    - name: Run tests
-      working-directory: ./frontend
-      run: |
-        npm run test -- --coverage --watchAll=false
-        
-    - name: Build application
-      working-directory: ./frontend
-      run: |
-        npm run build
+      - name: Validate appsscript.json is valid JSON
+        run: |
+          python3 -c "import json; json.load(open('apps-script/appsscript.json')); print('appsscript.json OK')"
 
-  # セキュリティスキャン
-  security-scan:
-    name: Security Scan
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Run Trivy vulnerability scanner
-      uses: aquasecurity/trivy-action@master
-      with:
-        scan-type: 'fs'
-        scan-ref: '.'
-        format: 'sarif'
-        output: 'trivy-results.sarif'
-        
-    - name: Upload Trivy scan results
-      uses: github/codeql-action/upload-sarif@v2
-      if: always()
-      with:
-        sarif_file: 'trivy-results.sarif'
-
-  # Docker イメージのビルド
-  docker-build:
-    name: Docker Build
-    runs-on: ubuntu-latest
-    needs: [backend-test, frontend-test]
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-      
-    - name: Build backend image
-      uses: docker/build-push-action@v5
-      with:
-        context: ./backend
-        file: ./backend/Dockerfile.dev
-        push: false
-        tags: demand-forecast-backend:latest
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-        
-    - name: Build frontend image
-      uses: docker/build-push-action@v5
-      with:
-        context: ./frontend
-        file: ./frontend/Dockerfile.dev
-        push: false
-        tags: demand-forecast-frontend:latest
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-
-  # デプロイ (メインブランチのみ)
-  deploy:
-    name: Deploy to Staging
-    runs-on: ubuntu-latest
-    needs: [backend-test, frontend-test, docker-build]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    
-    environment: staging
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Deploy to staging
-      run: |
-        echo "Deployment to staging environment"
-        # AWS CLI やその他のデプロイツールを使用
-        # 実際のデプロイ処理はインフラ構成に依存
-        
-    - name: Health check
-      run: |
-        echo "Performing health check"
-        # デプロイ後のヘルスチェック
-        # curl -f https://staging.yourdomain.com/api/v1/health
-
-  # 通知
-  notify:
-    name: Notify Results
-    runs-on: ubuntu-latest
-    needs: [backend-test, frontend-test, security-scan, docker-build]
-    if: always()
-    
-    steps:
-    - name: Notify Slack
-      if: failure()
-      uses: 8398a7/action-slack@v3
-      with:
-        status: ${{ job.status }}
-        channel: '#development'
-        text: 'CI/CD Pipeline failed! Please check the logs.'
-      env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      - name: Syntax-check .gs files (parsed as JavaScript)
+        run: |
+          fail=0
+          for f in apps-script/*.gs; do
+            # .gs は V8 ランタイムのJavaScript。node --check で構文チェックする
+            cp "$f" "/tmp/$(basename "$f").js"
+            if node --check "/tmp/$(basename "$f").js"; then
+              echo "OK: $f"
+            else
+              echo "SYNTAX ERROR: $f"; fail=1
+            fi
+          done
+          exit $fail
