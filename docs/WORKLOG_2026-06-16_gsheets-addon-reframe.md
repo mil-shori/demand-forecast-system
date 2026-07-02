@@ -83,8 +83,22 @@ HtmlService サイドバー構成はエディタアドオンとしてそのま�
   - Google Workspace Marketplace SDK で組織内（限定公開・審査不要）/ 一般公開（OAuth検証要）
 - トップ README にも導線を追記
 
+## 追記（2026-06-16）: ルートA（自分のアカウントにインストール）用の clasp ツール整備
+
+ユーザー判断で配布方式は「ルートA（テストデプロイで自分のアカウントにインストール／審査不要）」に決定。
+お手元で `clasp` を実行するだけで済むよう、以下を追加:
+
+- `apps-script/package.json` … `@google/clasp` を devDependency にし、`login`/`create`/`push`/`open`/`deploy` の npm スクリプトを用意
+- `apps-script/.claspignore` … `clasp push` の対象を `*.gs` / `*.html` / `appsscript.json` のみに限定
+- `.gitignore` に `node_modules/` / `apps-script/.clasp.json` / `.clasprc.json` を追加（ローカル生成物・scriptIdを非追跡）
+- `apps-script/README.md` のインストール手順をルートA中心（npmスクリプト）に更新
+
+最終的な「エディタ アドオンとしてインストール」操作は Apps Script エディタのUI
+（デプロイ → テストデプロイ → エディタ アドオン → インストール）で行う点を明記。
+※ この環境からは実際のGoogle認証・デプロイはできないため、clasp実行はお手元で必要。
+
 ## 残課題
 
-- [ ] 実際の Apps Script プロジェクトへのデプロイと、実freeeアカウントでのE2E動作確認
+- [ ] （お手元）`clasp` でスタンドアロン作成→push→テストデプロイでインストール、実freeeアカウントでE2E確認
 - [ ] 一般公開する場合の OAuth 検証（セキュリティ審査）対応
 - [ ] GAS用のテスト（GAS単体テストは難しいため、ロジックを純関数化して clasp 外で検証する余地）

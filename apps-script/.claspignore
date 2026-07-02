@@ -1,0 +1,7 @@
+# clasp push で Apps Script にアップロードする対象を、ソースのみに限定する。
+# （まず全て無視し、必要な拡張子だけ negate する）
+**/**
+
+!appsscript.json
+!*.gs
+!*.html

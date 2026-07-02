@@ -99,29 +99,33 @@ https://script.google.com/macros/d/{SCRIPT_ID}/usercallback
 
 HtmlService のサイドバー（タブUI）をそのまま使えるため、コードの書き換えは不要です。
 
-### 手順1: スタンドアロンのスクリプトプロジェクトにする
+> **今回はルートA（自分のアカウントにインストール／審査不要）で進めます。** 最短の手順は次の通り。
+
+### 手順1: スタンドアロンのスクリプトプロジェクトにする（clasp）
 
 アドオンとしてデプロイするには、特定のスプレッドシートに紐づかない**スタンドアロン**の
-スクリプトにします。clasp が簡単です:
+スクリプトにします。`apps-script/` に clasp 用の `package.json` / `.claspignore` を同梱済みです:
 
 ```bash
-npm install -g @google/clasp
-clasp login
 cd apps-script
-clasp create --type standalone --title "freee経理アシスタント"   # 新規作成
-clasp push                                                        # 全ファイルをアップロード
+npm install            # @google/clasp をローカル導入
+npm run login          # clasp login（ブラウザでGoogle認証）
+npm run create         # スタンドアロンのスクリプトを新規作成（.clasp.json 生成）
+npm run push           # ソース(*.gs / *.html / appsscript.json)のみアップロード
+npm run open           # エディタをブラウザで開く
 ```
 
-（既存スクリプトに上げる場合は `.clasp.json.example` を `.clasp.json` にコピーし scriptId を設定して `clasp push`）
+（既存スクリプトに上げる場合は `.clasp.json.example` を `.clasp.json` にコピーし scriptId を設定して `npm run push`）
 
-その後、Apps Script エディタで OAuth2 ライブラリ
-（`1B7FSrk5Zi6L1rSxxTDgDEUsPzlukDsi4KGuTMorsTQHhGBzBkMun4iDF`）を追加し、
+その後、Apps Script エディタで（`appsscript.json` により自動で入りますが未反映なら）OAuth2 ライブラリ
+`1B7FSrk5Zi6L1rSxxTDgDEUsPzlukDsi4KGuTMorsTQHhGBzBkMun4iDF` を追加し、
 スクリプト プロパティに認証情報（FREEE_CLIENT_ID 等）を登録します（上記セットアップ手順2・3と同じ）。
 
 ### 手順2-A: 自分のアカウントにインストール（最短・審査不要）
 
 Apps Script エディタ → **デプロイ → テストデプロイ** → 種類で
-**「エディタ アドオン」** を選び **「インストール」** を押します。
+**「エディタ アドオン」** を選び **「インストール」** を押します
+（この「インストール」操作は clasp では行えず、エディタのUIから実行します）。
 
 これで、あなたのアカウントの**任意の**スプレッドシートで
 「拡張機能 → freee経理アシスタント → サイドバーを開く」が使えるようになります
