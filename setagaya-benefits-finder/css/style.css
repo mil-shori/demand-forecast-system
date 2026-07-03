@@ -1,0 +1,453 @@
+/* せたがや子育て支援ナビ スタイル */
+:root {
+  --green: #2e7d4f;
+  --green-dark: #1f5c39;
+  --green-light: #e7f3ec;
+  --accent: #f0a441;
+  --text: #2b2b2b;
+  --text-sub: #5f6b64;
+  --border: #d8e2dc;
+  --bg: #f6f9f7;
+  --card: #ffffff;
+  --danger: #b3541e;
+  --radius: 12px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "BIZ UDPGothic", Meiryo, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.7;
+}
+
+.container {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+/* ヘッダー */
+.site-header {
+  background: linear-gradient(135deg, var(--green) 0%, var(--green-dark) 100%);
+  color: #fff;
+  padding: 32px 0 36px;
+}
+
+.site-badge {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 999px;
+  padding: 2px 14px;
+  font-size: 0.8rem;
+  margin: 0 0 12px;
+}
+
+.site-header h1 {
+  margin: 0 0 8px;
+  font-size: 1.9rem;
+}
+
+.site-lead {
+  margin: 0;
+  opacity: 0.95;
+  max-width: 640px;
+}
+
+/* パネル */
+.panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin: 24px 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.panel h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.25rem;
+  margin: 0 0 16px;
+  color: var(--green-dark);
+}
+
+.step-num {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--green);
+  color: #fff;
+  font-size: 1rem;
+}
+
+/* フォーム */
+fieldset {
+  border: none;
+  border-top: 1px dashed var(--border);
+  margin: 0;
+  padding: 16px 0;
+}
+
+legend {
+  font-weight: 700;
+  padding: 0 0 8px;
+  color: var(--text);
+}
+
+.choice-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 8px;
+}
+
+.choice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.choice:hover {
+  background: var(--green-light);
+}
+
+.choice:has(input:checked) {
+  background: var(--green-light);
+  border-color: var(--green);
+}
+
+.choice input {
+  margin-top: 5px;
+  accent-color: var(--green);
+  flex-shrink: 0;
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--border);
+}
+
+/* ボタン */
+.btn {
+  font-size: 1rem;
+  padding: 10px 22px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.15s;
+}
+
+.btn:hover {
+  opacity: 0.85;
+}
+
+.btn-primary {
+  background: var(--green);
+  color: #fff;
+  font-weight: 700;
+}
+
+.btn-secondary {
+  background: #fff;
+  color: var(--green-dark);
+  border-color: var(--green);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-sub);
+  border-color: var(--border);
+}
+
+/* 結果一覧 */
+.results-summary {
+  font-weight: 700;
+  color: var(--green-dark);
+  margin: 0 0 4px;
+}
+
+.hint {
+  color: var(--text-sub);
+  font-size: 0.9rem;
+  margin: 0 0 16px;
+}
+
+.results-list {
+  display: grid;
+  gap: 16px;
+}
+
+.benefit-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  background: #fff;
+}
+
+.benefit-card.selected {
+  border-color: var(--green);
+  box-shadow: 0 0 0 2px var(--green-light);
+}
+
+.benefit-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.benefit-head h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--green-dark);
+}
+
+.tag {
+  font-size: 0.75rem;
+  border-radius: 999px;
+  padding: 1px 10px;
+  white-space: nowrap;
+}
+
+.tag-category {
+  background: var(--green-light);
+  color: var(--green-dark);
+  border: 1px solid var(--green);
+}
+
+.tag-income {
+  background: #fdf3e3;
+  color: var(--danger);
+  border: 1px solid var(--accent);
+}
+
+.benefit-amount {
+  font-weight: 700;
+  margin: 4px 0;
+}
+
+.benefit-summary,
+.benefit-meta {
+  margin: 4px 0;
+  font-size: 0.95rem;
+}
+
+.benefit-meta {
+  color: var(--text-sub);
+}
+
+.benefit-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+}
+
+.benefit-foot a {
+  color: var(--green-dark);
+}
+
+.select-benefit {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--green-dark);
+}
+
+.select-benefit input {
+  accent-color: var(--green);
+  width: 18px;
+  height: 18px;
+}
+
+.no-results {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-sub);
+  background: var(--green-light);
+  border-radius: var(--radius);
+}
+
+/* チェックリスト */
+.checklist-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.copy-status {
+  color: var(--green-dark);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.checklist-date {
+  color: var(--text-sub);
+  font-size: 0.9rem;
+  margin: 0 0 12px;
+}
+
+.checklist-group {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  margin-bottom: 14px;
+  background: #fff;
+}
+
+.checklist-group h3 {
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+  color: var(--green-dark);
+}
+
+.checklist-group.common {
+  background: var(--green-light);
+}
+
+.checklist-window {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+  color: var(--text-sub);
+}
+
+.checklist-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.checklist-items li {
+  padding: 4px 0;
+}
+
+.checklist-items label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.checklist-items input {
+  margin-top: 6px;
+  accent-color: var(--green);
+}
+
+.checklist-items input:checked + span {
+  text-decoration: line-through;
+  color: var(--text-sub);
+}
+
+.checklist-note {
+  font-size: 0.88rem;
+  color: var(--danger);
+  margin: 8px 0 0;
+}
+
+.checklist-link {
+  font-size: 0.88rem;
+  margin: 4px 0 0;
+}
+
+.checklist-empty {
+  color: var(--text-sub);
+}
+
+/* 免責事項 */
+.disclaimer {
+  border: 1px solid var(--accent);
+  background: #fdf8ee;
+  border-radius: var(--radius);
+  padding: 18px 22px;
+  margin: 24px 0;
+  font-size: 0.9rem;
+}
+
+.disclaimer h2 {
+  font-size: 1rem;
+  margin: 0 0 8px;
+  color: var(--danger);
+}
+
+.disclaimer ul {
+  margin: 0;
+  padding-left: 1.2em;
+}
+
+/* フッター */
+.site-footer {
+  background: var(--green-dark);
+  color: #fff;
+  padding: 20px 0;
+  margin-top: 32px;
+  font-size: 0.85rem;
+}
+
+.site-footer p {
+  margin: 0;
+}
+
+/* 印刷用: チェックリストのみを出力 */
+@media print {
+  body {
+    background: #fff;
+  }
+
+  .site-header,
+  .site-footer,
+  .disclaimer,
+  .panel:not(#checklist-section),
+  .no-print {
+    display: none !important;
+  }
+
+  .panel {
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .checklist-group {
+    break-inside: avoid;
+  }
+}
+
+@media (max-width: 600px) {
+  .site-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .panel {
+    padding: 18px 14px;
+  }
+}

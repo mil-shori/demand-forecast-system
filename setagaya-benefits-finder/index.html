@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="世田谷区の子育て家庭向けに、申請できる補助・手当を条件で絞り込み、必要な提出書類のチェックリストを作成できるツールです。">
+  <title>せたがや子育て支援ナビ｜補助・手当かんたん検索</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <p class="site-badge">世田谷区の子育て家庭向け（非公式ツール）</p>
+      <h1>せたがや子育て支援ナビ</h1>
+      <p class="site-lead">
+        ご家庭の状況を選ぶだけで、申請できる可能性のある補助・手当を絞り込み、
+        必要な提出書類のチェックリストを作成できます。
+      </p>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- ステップ1: 条件入力 -->
+    <section class="panel" aria-labelledby="step1-title">
+      <h2 id="step1-title"><span class="step-num">1</span>ご家庭の状況を教えてください</h2>
+
+      <form id="profile-form">
+        <fieldset>
+          <legend>妊娠中の方はいますか？</legend>
+          <label class="choice">
+            <input type="checkbox" id="pregnant" name="pregnant">
+            <span>妊娠中（これから出産予定）</span>
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>お子さんの年齢（あてはまるものすべて）</legend>
+          <div class="choice-grid" id="age-choices">
+            <label class="choice"><input type="checkbox" name="ages" value="0-2"><span>0〜2歳</span></label>
+            <label class="choice"><input type="checkbox" name="ages" value="3-5"><span>3〜5歳（未就学）</span></label>
+            <label class="choice"><input type="checkbox" name="ages" value="elementary"><span>小学生</span></label>
+            <label class="choice"><input type="checkbox" name="ages" value="junior"><span>中学生</span></label>
+            <label class="choice"><input type="checkbox" name="ages" value="high"><span>高校生年代</span></label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>世帯の状況（あてはまるものすべて）</legend>
+          <div class="choice-grid">
+            <label class="choice"><input type="checkbox" id="single-parent"><span>ひとり親世帯</span></label>
+            <label class="choice"><input type="checkbox" id="disability"><span>障害のあるお子さんがいる</span></label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>保育・幼稚園の利用状況（あてはまるものすべて）</legend>
+          <div class="choice-grid">
+            <label class="choice"><input type="checkbox" name="childcare" value="ninka"><span>認可保育園・認定こども園（利用中／利用予定）</span></label>
+            <label class="choice"><input type="checkbox" name="childcare" value="ninkagai"><span>認証保育所・認可外保育施設</span></label>
+            <label class="choice"><input type="checkbox" name="childcare" value="yochien"><span>私立幼稚園</span></label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>所得制限のある制度の表示</legend>
+          <label class="choice">
+            <input type="checkbox" id="include-income-limited" checked>
+            <span>所得制限のある制度も表示する（該当するかは各制度の基準をご確認ください）</span>
+          </label>
+        </fieldset>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">この条件で制度をさがす</button>
+          <button type="button" id="reset-btn" class="btn btn-ghost">条件をリセット</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- ステップ2: 結果一覧 -->
+    <section class="panel" id="results-section" hidden aria-labelledby="step2-title">
+      <h2 id="step2-title"><span class="step-num">2</span>あてはまる可能性のある制度</h2>
+      <p id="results-summary" class="results-summary" role="status"></p>
+      <p class="hint">
+        書類リストを作りたい制度に「<strong>チェックリストに追加</strong>」でチェックを入れてください。
+      </p>
+      <div id="results-list" class="results-list"></div>
+    </section>
+
+    <!-- ステップ3: 書類チェックリスト -->
+    <section class="panel" id="checklist-section" hidden aria-labelledby="step3-title">
+      <h2 id="step3-title"><span class="step-num">3</span>提出書類チェックリスト</h2>
+      <div class="checklist-actions no-print">
+        <button type="button" id="print-btn" class="btn btn-primary">印刷／PDF保存</button>
+        <button type="button" id="copy-btn" class="btn btn-secondary">テキストをコピー</button>
+        <button type="button" id="download-btn" class="btn btn-secondary">テキストをダウンロード</button>
+        <span id="copy-status" class="copy-status" role="status"></span>
+      </div>
+      <div id="checklist-output"></div>
+    </section>
+
+    <section class="disclaimer" aria-label="免責事項">
+      <h2>ご利用にあたっての注意</h2>
+      <ul>
+        <li>このサイトは世田谷区の<strong>公式サイトではありません</strong>。掲載情報は2026年7月時点の調査に基づく参考情報です。</li>
+        <li>金額・所得制限・必要書類は年度や個別の状況により異なります。<strong>申請前に必ず各制度の公式ページまたは窓口でご確認ください</strong>。</li>
+        <li>入力内容はブラウザ内でのみ処理され、外部に送信されることはありません。</li>
+        <li>制度の総合案内: <a href="https://www.city.setagaya.lg.jp/kodomokyouiku/kosodate/13020.html" target="_blank" rel="noopener">世田谷区 子育て・教育に関する手当</a>／<a href="https://www.city.setagaya.lg.jp/kodomokyouiku/kosodate/13019.html" target="_blank" rel="noopener">子育て・教育に関する助成</a></li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>せたがや子育て支援ナビ（非公式）｜情報は参考であり、正確な内容は世田谷区公式ホームページをご確認ください。</p>
+    </div>
+  </footer>
+
+  <script src="js/data.js"></script>
+  <script src="js/matcher.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
