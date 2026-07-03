@@ -16,6 +16,7 @@
   // チェックリストに追加された制度ID
   const selectedIds = new Set();
   let lastChecklistText = '';
+  let lastChecklist = null;
 
   function readProfile() {
     return {
@@ -107,6 +108,7 @@
     if (selected.length === 0) {
       checklistSection.hidden = false;
       lastChecklistText = '';
+      lastChecklist = null;
       checklistOutput.appendChild(el('p', 'checklist-empty',
         '上の一覧から制度を選ぶと、ここに提出書類のチェックリストが表示されます。'));
       return;
@@ -115,6 +117,7 @@
     const checklist = buildChecklist(selected);
     const dateLabel = todayLabel();
     lastChecklistText = checklistToText(checklist, dateLabel);
+    lastChecklist = checklist;
 
     checklistSection.hidden = false;
     checklistOutput.appendChild(el('p', 'checklist-date', `作成日: ${dateLabel}／選択した制度: ${selected.length}件`));
@@ -190,6 +193,19 @@
 
   document.getElementById('print-btn').addEventListener('click', () => {
     window.print();
+  });
+
+  document.getElementById('pdf-btn').addEventListener('click', () => {
+    if (!lastChecklist) {
+      copyStatus.textContent = '先に制度を選択してください。';
+      return;
+    }
+    try {
+      downloadChecklistPdf(lastChecklist, todayLabel(), '世田谷区子育て支援_提出書類チェックリスト.pdf');
+      copyStatus.textContent = 'PDFを保存しました。';
+    } catch (err) {
+      copyStatus.textContent = 'PDFを作成できませんでした。テキストのコピーをご利用ください。';
+    }
   });
 
   document.getElementById('copy-btn').addEventListener('click', async () => {

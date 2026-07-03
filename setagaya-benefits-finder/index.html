@@ -90,7 +90,8 @@
     <section class="panel" id="checklist-section" hidden aria-labelledby="step3-title">
       <h2 id="step3-title"><span class="step-num">3</span>提出書類チェックリスト</h2>
       <div class="checklist-actions no-print">
-        <button type="button" id="print-btn" class="btn btn-primary">印刷／PDF保存</button>
+        <button type="button" id="pdf-btn" class="btn btn-primary">PDFをダウンロード</button>
+        <button type="button" id="print-btn" class="btn btn-secondary">印刷</button>
         <button type="button" id="copy-btn" class="btn btn-secondary">テキストをコピー</button>
         <button type="button" id="download-btn" class="btn btn-secondary">テキストをダウンロード</button>
         <span id="copy-status" class="copy-status" role="status"></span>
@@ -117,6 +118,7 @@
 
   <script src="js/data.js"></script>
   <script src="js/matcher.js"></script>
+  <script src="js/pdfgen.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
