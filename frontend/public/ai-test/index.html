@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#4f46e5" />
+  <meta name="description" content="生成AIの基礎知識を確認できるスマホ向け理解度テスト" />
+  <title>AI理解度テスト</title>
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-dark: #4338ca;
+      --success: #059669;
+      --success-bg: #ecfdf5;
+      --error: #dc2626;
+      --error-bg: #fef2f2;
+      --text: #1f2937;
+      --text-sub: #6b7280;
+      --bg: #f3f4f6;
+      --card: #ffffff;
+      --border: #e5e7eb;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --primary: #818cf8;
+        --primary-dark: #6366f1;
+        --success: #34d399;
+        --success-bg: #064e3b;
+        --error: #f87171;
+        --error-bg: #7f1d1d;
+        --text: #f9fafb;
+        --text-sub: #9ca3af;
+        --bg: #111827;
+        --card: #1f2937;
+        --border: #374151;
+      }
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      min-height: 100dvh;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+    .container {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 16px;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      text-align: center;
+      padding: 12px 0 16px;
+    }
+    header h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+    header p {
+      font-size: 0.8rem;
+      color: var(--text-sub);
+      margin-top: 4px;
+    }
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    /* プログレスバー */
+    .progress-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .progress-bar {
+      flex: 1;
+      height: 8px;
+      background: var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--primary);
+      border-radius: 4px;
+      transition: width 0.3s ease;
+      width: 0%;
+    }
+    .progress-text {
+      font-size: 0.8rem;
+      color: var(--text-sub);
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+    /* 設問 */
+    .q-category {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--primary);
+      border: 1px solid var(--primary);
+      border-radius: 999px;
+      padding: 2px 10px;
+      margin-bottom: 10px;
+    }
+    .q-text {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+    .choices {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .choice {
+      display: block;
+      width: 100%;
+      text-align: left;
+      background: var(--card);
+      color: var(--text);
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 0.95rem;
+      line-height: 1.5;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      min-height: 52px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .choice:active { border-color: var(--primary); }
+    .choice.correct {
+      border-color: var(--success);
+      background: var(--success-bg);
+    }
+    .choice.wrong {
+      border-color: var(--error);
+      background: var(--error-bg);
+    }
+    .choice:disabled { cursor: default; opacity: 1; }
+    .choice.dimmed { opacity: 0.5; }
+    /* 解説 */
+    .feedback {
+      margin-top: 16px;
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 0.9rem;
+      display: none;
+    }
+    .feedback.show { display: block; }
+    .feedback.ok { background: var(--success-bg); border: 1px solid var(--success); }
+    .feedback.ng { background: var(--error-bg); border: 1px solid var(--error); }
+    .feedback .result-label {
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .feedback.ok .result-label { color: var(--success); }
+    .feedback.ng .result-label { color: var(--error); }
+    /* ボタン */
+    .btn {
+      display: block;
+      width: 100%;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 16px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      min-height: 52px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn:active { background: var(--primary-dark); }
+    .btn.hidden { display: none; }
+    .btn-secondary {
+      background: transparent;
+      color: var(--primary);
+      border: 2px solid var(--primary);
+    }
+    .next-wrap { margin-top: 16px; }
+    /* 結果画面 */
+    .score-circle {
+      width: 160px;
+      height: 160px;
+      margin: 8px auto 16px;
+      position: relative;
+    }
+    .score-circle svg { transform: rotate(-90deg); }
+    .score-circle .track { stroke: var(--border); }
+    .score-circle .value {
+      stroke: var(--primary);
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.8s ease;
+    }
+    .score-num {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .score-num strong {
+      font-size: 2.2rem;
+      font-variant-numeric: tabular-nums;
+    }
+    .score-num span {
+      font-size: 0.75rem;
+      color: var(--text-sub);
+    }
+    .grade {
+      text-align: center;
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .grade-msg {
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-sub);
+      margin-bottom: 20px;
+    }
+    .review-list {
+      list-style: none;
+      margin-bottom: 20px;
+    }
+    .review-list li {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.85rem;
+    }
+    .review-list li:last-child { border-bottom: none; }
+    .review-mark {
+      flex-shrink: 0;
+      font-weight: 700;
+      font-size: 1rem;
+      width: 24px;
+      text-align: center;
+    }
+    .review-mark.ok { color: var(--success); }
+    .review-mark.ng { color: var(--error); }
+    .screen { display: none; }
+    .screen.active { display: block; }
+    .start-desc {
+      font-size: 0.9rem;
+      margin-bottom: 20px;
+    }
+    .start-desc ul {
+      margin: 12px 0 0 1.2em;
+      color: var(--text-sub);
+      font-size: 0.85rem;
+    }
+    footer {
+      text-align: center;
+      font-size: 0.7rem;
+      color: var(--text-sub);
+      padding: 20px 0 8px;
+      margin-top: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🤖 AI理解度テスト</h1>
+      <p>生成AIの基礎知識をチェックしよう</p>
+    </header>
+
+    <!-- スタート画面 -->
+    <div id="screen-start" class="screen active">
+      <div class="card">
+        <p class="start-desc">
+          生成AI（ChatGPT・Claude など）を業務で安全に活用するための基礎知識を、全10問のクイズ形式で確認できます。
+          <ul>
+            <li>所要時間：約5分</li>
+            <li>4択形式・その場で解説を表示</li>
+            <li>最後にスコアと復習ポイントを表示</li>
+          </ul>
+        </p>
+        <button class="btn" id="btn-start">テストを始める</button>
+      </div>
+    </div>
+
+    <!-- 出題画面 -->
+    <div id="screen-quiz" class="screen">
+      <div class="progress-wrap">
+        <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+        <span class="progress-text" id="progress-text">1 / 10</span>
+      </div>
+      <div class="card">
+        <span class="q-category" id="q-category"></span>
+        <p class="q-text" id="q-text"></p>
+        <div class="choices" id="choices"></div>
+        <div class="feedback" id="feedback">
+          <p class="result-label" id="result-label"></p>
+          <p id="explanation"></p>
+        </div>
+      </div>
+      <div class="next-wrap">
+        <button class="btn hidden" id="btn-next">次の問題へ</button>
+      </div>
+    </div>
+
+    <!-- 結果画面 -->
+    <div id="screen-result" class="screen">
+      <div class="card">
+        <div class="score-circle">
+          <svg width="160" height="160" viewBox="0 0 160 160">
+            <circle class="track" cx="80" cy="80" r="70" fill="none" stroke-width="12" />
+            <circle class="value" id="score-arc" cx="80" cy="80" r="70" fill="none" stroke-width="12"
+                    stroke-dasharray="439.8" stroke-dashoffset="439.8" />
+          </svg>
+          <div class="score-num">
+            <strong id="score-value">0</strong>
+            <span>/ 10 問正解</span>
+          </div>
+        </div>
+        <p class="grade" id="grade"></p>
+        <p class="grade-msg" id="grade-msg"></p>
+        <ul class="review-list" id="review-list"></ul>
+        <button class="btn btn-secondary" id="btn-retry">もう一度挑戦する</button>
+      </div>
+    </div>
+
+    <footer>AI理解度テスト v1.0</footer>
+  </div>
+
+  <script>
+    const QUESTIONS = [
+      {
+        category: "基礎知識",
+        text: "生成AI（Generative AI）の説明として最も適切なものはどれ？",
+        choices: [
+          "学習したデータのパターンをもとに、文章や画像などを新しく生成するAI",
+          "インターネットをリアルタイムに検索して答えを探すプログラム",
+          "あらかじめ登録された回答文をそのまま返すチャットボット",
+          "人間の脳をそのまま電子的に再現したコンピュータ"
+        ],
+        answer: 0,
+        explanation: "生成AIは大量のデータから学習したパターンをもとに、新しいテキスト・画像・音声などを生成します。検索エンジンや定型応答ボットとは仕組みが異なります。"
+      },
+      {
+        category: "基礎知識",
+        text: "ChatGPTやClaudeのベースとなっている「LLM」とは何の略？",
+        choices: [
+          "Large Language Model（大規模言語モデル）",
+          "Live Learning Machine（実況学習マシン）",
+          "Logical Language Method（論理言語手法）",
+          "Long Life Memory（長期記憶装置）"
+        ],
+        answer: 0,
+        explanation: "LLMはLarge Language Model（大規模言語モデル）の略。膨大なテキストデータから言語のパターンを学習した巨大なAIモデルのことです。"
+      },
+      {
+        category: "仕組み",
+        text: "LLMが文章を生成する基本的な仕組みとして正しいものは？",
+        choices: [
+          "次に来る単語（トークン）を確率的に予測して、つなげていく",
+          "データベースから最も似ている文章をコピーして返す",
+          "文法ルールをプログラマーが1つずつ手作業で登録している",
+          "毎回インターネット上の記事をそのまま貼り付けている"
+        ],
+        answer: 0,
+        explanation: "LLMは「次に来る単語（トークン）は何か」を確率的に予測することを繰り返して文章を生成します。文章の丸写しではなく、学習したパターンからの生成です。"
+      },
+      {
+        category: "リスク",
+        text: "AIが事実と異なる内容をもっともらしく生成してしまう現象を何と呼ぶ？",
+        choices: [
+          "ハルシネーション（幻覚）",
+          "オーバーフロー",
+          "シンギュラリティ",
+          "ディープフェイク"
+        ],
+        answer: 0,
+        explanation: "ハルシネーションとは、AIが存在しない事実や情報をもっともらしく生成する現象です。AIの回答は必ず人間がファクトチェックする必要があります。"
+      },
+      {
+        category: "セキュリティ",
+        text: "業務で生成AIを使うとき、プロンプト（入力文）の扱いとして正しいものは？",
+        choices: [
+          "顧客の個人情報やパスワード・APIキーなどの機密情報は入力しない",
+          "社外秘の資料も、便利なら全文貼り付けてよい",
+          "AIサービスに入力した内容は誰にも見られないので何でも入力してよい",
+          "機密情報は英語に翻訳すれば入力しても安全"
+        ],
+        answer: 0,
+        explanation: "入力内容がサービス側に保存・学習利用される可能性があります。個人情報・認証情報・社外秘情報は入力しないのが原則です。翻訳しても機密性は変わりません。"
+      },
+      {
+        category: "リスク",
+        text: "AIが生成した文章やコードを業務で使う前に、必ずやるべきことは？",
+        choices: [
+          "内容が正しいか人間の目で確認・検証する",
+          "そのまま使う（AIは間違えないため）",
+          "生成日時を記録するだけでよい",
+          "文字数を数えて規定内か確認するだけでよい"
+        ],
+        answer: 0,
+        explanation: "AIの出力には誤り・古い情報・ハルシネーションが含まれる可能性があります。業務利用の前に、人間による内容の確認・検証（レビューやテスト）が必須です。"
+      },
+      {
+        category: "基礎知識",
+        text: "「ナレッジカットオフ（学習データの期限）」の説明として正しいものは？",
+        choices: [
+          "AIの学習データはある時点までのもので、それ以降の出来事は基本的に知らない",
+          "AIが1日に回答できる質問数の上限のこと",
+          "AIが記憶できる会話の長さの上限のこと",
+          "AIの利用料金が発生し始める日付のこと"
+        ],
+        answer: 0,
+        explanation: "LLMは学習時点（カットオフ）までのデータで訓練されているため、最新のニュースや直近の出来事は知らないことがあります。最新情報は別途確認が必要です。"
+      },
+      {
+        category: "活用",
+        text: "AIから精度の高い回答を引き出すプロンプトの書き方として最も効果的なのは？",
+        choices: [
+          "目的・背景・条件・出力形式を具体的に伝える",
+          "とにかく短く「教えて」とだけ書く",
+          "同じ質問を10回連続で送る",
+          "すべてひらがなで書く"
+        ],
+        answer: 0,
+        explanation: "「誰向けに・何のために・どんな形式で」など、目的や条件を具体的に伝えるほど、AIは意図に合った回答を返しやすくなります。これがプロンプトエンジニアリングの基本です。"
+      },
+      {
+        category: "活用",
+        text: "生成AIの得意・不得意の説明として正しいものは？",
+        choices: [
+          "文章の要約や下書き作成は得意だが、最新情報や正確な数値計算は苦手なことがある",
+          "どんな分野でも100%正確な回答ができる",
+          "計算は得意だが、文章の生成はまったくできない",
+          "人間の感情を完全に理解して判断できる"
+        ],
+        answer: 0,
+        explanation: "生成AIは要約・翻訳・下書き・アイデア出しなどが得意な一方、最新情報・厳密な計算・事実確認が必要な回答は苦手なことがあります。得意分野を見極めて活用しましょう。"
+      },
+      {
+        category: "セキュリティ",
+        text: "AIが生成した成果物（文章・画像・コード）の取り扱いで注意すべき点は？",
+        choices: [
+          "著作権や利用規約の問題がないか確認してから利用する",
+          "AIが作ったものはすべて自由に商用利用できる",
+          "生成物には一切の権利問題が発生しない",
+          "社外公開の場合のみ確認すればよく、社内利用は何でもOK"
+        ],
+        answer: 0,
+        explanation: "生成物が既存の著作物に類似するリスクや、サービスごとの利用規約の制限があります。特に公開・商用利用の前には権利面の確認が重要です。"
+      }
+    ];
+
+    const GRADES = [
+      { min: 9, label: "🏆 AIマスター", msg: "素晴らしい！AIの基礎を十分に理解しています。チームの推進役として活躍できます。" },
+      { min: 7, label: "🌟 AI活用者", msg: "しっかり理解できています。間違えた問題を復習すれば完璧です。" },
+      { min: 5, label: "📗 AI初級者", msg: "基礎は身についています。リスクとセキュリティの項目を重点的に復習しましょう。" },
+      { min: 0, label: "🌱 AI入門者", msg: "まずは解説を読み返して、もう一度チャレンジしてみましょう！" }
+    ];
+
+    const $ = (id) => document.getElementById(id);
+    let current = 0;
+    let score = 0;
+    let results = [];
+
+    function show(screenId) {
+      document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+      $(screenId).classList.add("active");
+      window.scrollTo(0, 0);
+    }
+
+    // 選択肢の表示順をシャッフルする（正解位置の偏り防止）
+    function shuffledChoices(q) {
+      const idx = q.choices.map((_, i) => i);
+      for (let i = idx.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [idx[i], idx[j]] = [idx[j], idx[i]];
+      }
+      return idx;
+    }
+
+    function renderQuestion() {
+      const q = QUESTIONS[current];
+      $("progress-text").textContent = `${current + 1} / ${QUESTIONS.length}`;
+      $("progress-fill").style.width = `${(current / QUESTIONS.length) * 100}%`;
+      $("q-category").textContent = q.category;
+      $("q-text").textContent = `Q${current + 1}. ${q.text}`;
+      $("feedback").className = "feedback";
+      $("btn-next").classList.add("hidden");
+      $("btn-next").textContent = current === QUESTIONS.length - 1 ? "結果を見る" : "次の問題へ";
+
+      const choicesEl = $("choices");
+      choicesEl.innerHTML = "";
+      shuffledChoices(q).forEach(originalIdx => {
+        const btn = document.createElement("button");
+        btn.className = "choice";
+        btn.textContent = q.choices[originalIdx];
+        btn.addEventListener("click", () => answer(originalIdx, btn));
+        choicesEl.appendChild(btn);
+      });
+    }
+
+    function answer(selectedIdx, selectedBtn) {
+      const q = QUESTIONS[current];
+      const isCorrect = selectedIdx === q.answer;
+      if (isCorrect) score++;
+      results.push({ text: q.text, correct: isCorrect });
+
+      document.querySelectorAll(".choice").forEach(btn => {
+        btn.disabled = true;
+        if (btn.textContent === q.choices[q.answer]) {
+          btn.classList.add("correct");
+        } else if (btn === selectedBtn) {
+          btn.classList.add("wrong");
+        } else {
+          btn.classList.add("dimmed");
+        }
+      });
+
+      const fb = $("feedback");
+      fb.classList.add("show", isCorrect ? "ok" : "ng");
+      $("result-label").textContent = isCorrect ? "⭕ 正解！" : "❌ 不正解";
+      $("explanation").textContent = q.explanation;
+      $("btn-next").classList.remove("hidden");
+      if (navigator.vibrate) navigator.vibrate(isCorrect ? 30 : [50, 50, 50]);
+    }
+
+    function renderResult() {
+      $("score-value").textContent = score;
+      const circumference = 439.8;
+      requestAnimationFrame(() => {
+        $("score-arc").style.strokeDashoffset =
+          circumference * (1 - score / QUESTIONS.length);
+      });
+
+      const grade = GRADES.find(g => score >= g.min);
+      $("grade").textContent = grade.label;
+      $("grade-msg").textContent = grade.msg;
+
+      const list = $("review-list");
+      list.innerHTML = "";
+      results.forEach((r, i) => {
+        const li = document.createElement("li");
+        const mark = document.createElement("span");
+        mark.className = `review-mark ${r.correct ? "ok" : "ng"}`;
+        mark.textContent = r.correct ? "⭕" : "❌";
+        const text = document.createElement("span");
+        text.textContent = `Q${i + 1}. ${r.text}`;
+        li.append(mark, text);
+        list.appendChild(li);
+      });
+      show("screen-result");
+    }
+
+    $("btn-start").addEventListener("click", () => {
+      current = 0;
+      score = 0;
+      results = [];
+      renderQuestion();
+      show("screen-quiz");
+    });
+
+    $("btn-next").addEventListener("click", () => {
+      current++;
+      if (current < QUESTIONS.length) {
+        renderQuestion();
+        show("screen-quiz");
+      } else {
+        renderResult();
+      }
+    });
+
+    $("btn-retry").addEventListener("click", () => {
+      current = 0;
+      score = 0;
+      results = [];
+      renderQuestion();
+      show("screen-quiz");
+    });
+  </script>
+</body>
+</html>

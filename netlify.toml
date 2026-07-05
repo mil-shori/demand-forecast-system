@@ -6,7 +6,9 @@
   base = "frontend/"
   
   # ビルドコマンド
-  command = "npm ci && npm run build"
+  # package-lock.json が無いため npm ci ではなく npm install を使用
+  # NODE_ENV=production でも vite/typescript (devDependencies) が必要なため --include=dev を指定
+  command = "npm install --include=dev && npm run build"
   
   # パブリッシュディレクトリ
   publish = "dist"
@@ -26,7 +28,8 @@
 
 # 本番環境用設定
 [context.production]
-  command = "npm ci --only=production && npm run build"
+  # ビルドに devDependencies が必要なため --only=production は使用しない
+  command = "npm install --include=dev && npm run build"
   
   [context.production.environment]
     NODE_ENV = "production"
@@ -36,7 +39,7 @@
 
 # プレビュー環境用設定（プルリクエスト）
 [context.deploy-preview]
-  command = "npm ci && npm run build"
+  command = "npm install --include=dev && npm run build"
   
   [context.deploy-preview.environment]
     NODE_ENV = "development"
@@ -46,7 +49,7 @@
 
 # ブランチデプロイ用設定（develop branch）
 [context.branch-deploy]
-  command = "npm ci && npm run build"
+  command = "npm install --include=dev && npm run build"
   
   [context.branch-deploy.environment]
     NODE_ENV = "development"

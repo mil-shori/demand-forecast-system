@@ -175,6 +175,9 @@ dist/
 .cache/
 public
 
+# Vite の public はビルド成果物ではなくソースなので除外しない
+!frontend/public/
+
 # Storybook build outputs
 .out
 .storybook-out
