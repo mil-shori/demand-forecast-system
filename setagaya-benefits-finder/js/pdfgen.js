@@ -200,19 +200,15 @@
     return new Blob(chunks, { type: 'application/pdf' });
   }
 
-  function downloadChecklistPdf(checklist, generatedDate, filename) {
+  /**
+   * チェックリストからPDFを生成する。
+   * ダウンロードが使えない環境向けに、描画済みページ(canvas)も返す。
+   */
+  function createChecklistPdf(checklist, generatedDate) {
     const pages = renderPages(checklist, generatedDate);
     const blob = canvasesToPdfBlob(pages);
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 10000);
-    return pages.length;
+    return { blob, pages };
   }
 
-  global.downloadChecklistPdf = downloadChecklistPdf;
+  global.createChecklistPdf = createChecklistPdf;
 })(typeof window !== 'undefined' ? window : globalThis);

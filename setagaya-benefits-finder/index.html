@@ -70,7 +70,8 @@
         </fieldset>
 
         <div class="form-actions">
-          <button type="submit" class="btn btn-primary">この条件で制度をさがす</button>
+          <!-- サンドボックス環境ではform submitがブロックされるためtype="button"で実装 -->
+          <button type="button" id="search-btn" class="btn btn-primary">この条件で制度をさがす</button>
           <button type="button" id="reset-btn" class="btn btn-ghost">条件をリセット</button>
         </div>
       </form>
@@ -109,6 +110,18 @@
       </ul>
     </section>
   </main>
+
+  <!-- ダウンロード・コピーが使えない環境向けのフォールバック表示 -->
+  <div id="fallback-modal" class="modal-backdrop" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal-head">
+        <h3 id="modal-title"></h3>
+        <button type="button" id="modal-close" class="btn btn-ghost">閉じる</button>
+      </div>
+      <p id="modal-hint" class="modal-hint"></p>
+      <div id="modal-body" class="modal-body"></div>
+    </div>
+  </div>
 
   <footer class="site-footer">
     <div class="container">

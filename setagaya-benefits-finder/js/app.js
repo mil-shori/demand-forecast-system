@@ -165,8 +165,7 @@
     return ul;
   }
 
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
+  function runSearch() {
     const profile = readProfile();
     const matched = matchBenefits(profile, BENEFITS);
 
@@ -180,6 +179,14 @@
     resultsSection.hidden = false;
     renderChecklist();
     resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // サンドボックス環境（allow-formsなし）ではsubmitイベントが発火しないため
+  // clickを主経路にし、submitはEnterキー操作向けの補助とする
+  document.getElementById('search-btn').addEventListener('click', runSearch);
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    runSearch();
   });
 
   document.getElementById('reset-btn').addEventListener('click', () => {
@@ -195,14 +202,96 @@
     window.print();
   });
 
+  /* ---- フォールバックモーダル ----
+   * サンドボックス内表示などでダウンロード・クリップボードが
+   * ブロックされる環境でも内容を取り出せるようにする。
+   */
+  const modal = document.getElementById('fallback-modal');
+  const modalTitle = document.getElementById('modal-title');
+  const modalHint = document.getElementById('modal-hint');
+  const modalBody = document.getElementById('modal-body');
+
+  function openModal(title, hint) {
+    modalTitle.textContent = title;
+    modalHint.textContent = hint;
+    modalBody.textContent = '';
+    modal.hidden = false;
+  }
+
+  function closeModal() {
+    modal.hidden = true;
+    modalBody.textContent = '';
+  }
+
+  document.getElementById('modal-close').addEventListener('click', closeModal);
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !modal.hidden) closeModal();
+  });
+
+  // ダウンロードを試みる（サンドボックスでブロックされても例外にはならない）
+  function attemptDownload(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  }
+
+  // クリップボードAPIが使えない環境向けの旧方式コピー
+  function legacyCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.readOnly = true;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try {
+      ok = document.execCommand('copy');
+    } catch (err) {
+      ok = false;
+    }
+    ta.remove();
+    return ok;
+  }
+
+  function showTextModal(text, hint) {
+    openModal('チェックリスト（テキスト）', hint);
+    const ta = document.createElement('textarea');
+    ta.className = 'modal-textarea';
+    ta.value = text;
+    ta.readOnly = true;
+    modalBody.appendChild(ta);
+    ta.focus();
+    ta.select();
+  }
+
   document.getElementById('pdf-btn').addEventListener('click', () => {
     if (!lastChecklist) {
       copyStatus.textContent = '先に制度を選択してください。';
       return;
     }
     try {
-      downloadChecklistPdf(lastChecklist, todayLabel(), '世田谷区子育て支援_提出書類チェックリスト.pdf');
-      copyStatus.textContent = 'PDFを保存しました。';
+      const { blob, pages } = createChecklistPdf(lastChecklist, todayLabel());
+      attemptDownload(blob, '世田谷区子育て支援_提出書類チェックリスト.pdf');
+      // ダウンロードがブロックされる環境向けに、常にプレビューも表示する
+      openModal('PDFプレビュー',
+        'ダウンロードが自動で始まらない場合は、下の画像を右クリック（スマートフォンは長押し）して「名前を付けて保存」してください。');
+      pages.forEach((canvas, i) => {
+        const img = document.createElement('img');
+        img.src = canvas.toDataURL('image/jpeg', 0.85);
+        img.alt = `チェックリスト ${i + 1}ページ目`;
+        img.className = 'pdf-preview-page';
+        modalBody.appendChild(img);
+      });
+      copyStatus.textContent = '';
     } catch (err) {
       copyStatus.textContent = 'PDFを作成できませんでした。テキストのコピーをご利用ください。';
     }
@@ -213,11 +302,22 @@
       copyStatus.textContent = '先に制度を選択してください。';
       return;
     }
-    try {
-      await navigator.clipboard.writeText(lastChecklistText);
+    let ok = false;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      try {
+        await navigator.clipboard.writeText(lastChecklistText);
+        ok = true;
+      } catch (err) {
+        ok = false;
+      }
+    }
+    if (!ok) ok = legacyCopy(lastChecklistText);
+    if (ok) {
       copyStatus.textContent = 'コピーしました！';
-    } catch (err) {
-      copyStatus.textContent = 'コピーできませんでした。ダウンロードをご利用ください。';
+    } else {
+      copyStatus.textContent = '';
+      showTextModal(lastChecklistText,
+        '自動コピーが使えない環境です。下の内容を全選択してコピーしてください。');
     }
   });
 
@@ -227,13 +327,7 @@
       return;
     }
     const blob = new Blob([lastChecklistText], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = '世田谷区子育て支援_提出書類チェックリスト.txt';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
+    attemptDownload(blob, '世田谷区子育て支援_提出書類チェックリスト.txt');
+    copyStatus.textContent = 'ダウンロードが始まらない場合は「テキストをコピー」をご利用ください。';
   });
 })();
